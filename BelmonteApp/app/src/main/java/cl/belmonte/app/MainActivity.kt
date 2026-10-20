@@ -8,23 +8,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.belmonte.app.ui.theme.BelmonteAppTheme
-import cl.belmonte.app.view.InicioFase1Screen
+import cl.belmonte.app.view.VerificacionRoomFase2Screen
+import cl.belmonte.app.viewmodel.BelmonteViewModel
 
 /**
- * Actividad principal (punto de entrada de interfaz gráfica) de BelmonteApp.
+ * Actividad principal de BelmonteApp.
  *
  * ¿QUÉ HACE ESTA CLASE?
- * Configura Jetpack Compose mediante setContent, aplica el tema corporativo BelmonteAppTheme
- * y carga la pantalla inicial (en Fase 1 muestra InicioFase1Screen; en Fase 3 cargará el NavHost).
- *
- * ¿POR QUÉ SE HACE ASÍ?
- * En aplicaciones modernas con Jetpack Compose y Navigation Compose se utiliza una sola Activity
- * (arquitectura Single-Activity) donde todas las pantallas son funciones @Composable.
+ * Obtiene la instancia de BelmonteApplication, crea el BelmonteViewModel mediante su
+ * ViewModelProvider.Factory manual (sin Hilt/Koin) y muestra la pantalla activa dentro
+ * del tema corporativo BelmonteAppTheme.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val app = application as BelmonteApplication
+
         enableEdgeToEdge()
         setContent {
             BelmonteAppTheme(darkTheme = true) {
@@ -32,7 +33,10 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    InicioFase1Screen()
+                    val belmonteViewModel: BelmonteViewModel = viewModel(
+                        factory = BelmonteViewModel.provideFactory(app)
+                    )
+                    VerificacionRoomFase2Screen(viewModel = belmonteViewModel)
                 }
             }
         }
