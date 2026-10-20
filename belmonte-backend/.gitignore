@@ -1,0 +1,8 @@
+# Archivos generados por Gradle, IntelliJ IDEA y Spring Boot
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+.idea/
+*.iml
+*.log
+.DS_Store
