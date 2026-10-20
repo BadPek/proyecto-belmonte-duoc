@@ -154,3 +154,79 @@
          viajeDao.obtenerViajesConKmExtra()
      ```
   3. Con eso, en los datos de prueba aparecerá inmediatamente el **Viaje #107** (camión a Rancagua con `16.18 km extra` y `$40.450`).
+
+---
+
+## Fase 3: Navegación con Navigation Compose y 100% de Pantallas por Rol
+
+### 1. Tabla de archivos de la Fase 3 y qué hace cada uno
+
+| Archivo | Paquete / Ruta | ¿Qué hace y por qué existe? |
+| :--- | :--- | :--- |
+| `Rutas.kt` | `cl.belmonte.app.navigation` | Objeto singleton `Rutas` que centraliza todas las constantes de ruta del `NavHost` (`login`, `inicio`, `solicitante/nueva_solicitud`, `conductor/detalle_viaje/{viajeId}`, etc.) y funciones helper como `Rutas.detalleViajeConductor(101)` para construir rutas con argumentos sin errores de tipeo. |
+| `BelmonteNavHost.kt` | `cl.belmonte.app.navigation` | Contiene el `NavHost` principal de Jetpack Compose (`BelmonteNavHost`) que conecta las 13 pantallas de la aplicación y extrae los argumentos dinámicos (`viajeId` con `NavType.IntType`) del `backStackEntry`. |
+| `LoginScreen.kt` | `cl.belmonte.app.view` | **CU-01 Iniciar Sesión:** Formulario de correo y contraseña conectado a Room (`UsuarioDao.login`) + 4 botones de **Acceso Rápido Demo (1 clic)** para cambiar entre los 4 roles al instante durante el video o la defensa en vivo. |
+| `InicioRolScreen.kt` | `cl.belmonte.app.view` | Menú principal dinámico post-login que lee `usuarioActual.rol` (`ROLE_SOLICITANTE`, `ROLE_CONDUCTOR`, `ROLE_ADMIN`, `ROLE_ADMIN_EMPRESA`), muestra el resumen de indicadores en tiempo real y despliega las tarjetas de navegación exclusivas de ese rol. |
+| `SolicitanteScreens.kt` | `cl.belmonte.app.view` | Contiene las 3 pantallas del **Trabajador Solicitante**: `NuevaSolicitudScreen` (**CU-02**, elige tipo de vehículo, verifica cupos disponibles, elige direcciones/coordenadas de Santiago o Rancagua y calcula km extra Haversine en vivo), `MisViajesSolicitanteScreen` (lista con botón de cancelar para `PENDIENTE`/`ASIGNADO`) y `DetalleSeguimientoScreen` (**CU-09**, bitácora completa de `HistorialEstadoEntity`, reasignaciones e incidencias). |
+| `AdminBelmonteScreens.kt` | `cl.belmonte.app.view` | Contiene las 3 pantallas de la **Recepcionista / Admin Belmonte (`ROLE_ADMIN`)**: `SolicitudesPendientesAdminScreen` (bandeja de viajes pendientes y en curso), `AsignarViajeScreen` (**CU-03**, filtra vehículos del tipo solicitado y conductores con licencia vigente para despachar el viaje) y `ReasignarViajeScreen` (**CU-10**, cambia conductor/vehículo dejando auditoría en `historial_reasignaciones`). |
+| `ConductorScreens.kt` | `cl.belmonte.app.view` | Contiene las 3 pantallas del **Conductor (`ROLE_CONDUCTOR`)**: `ViajesConductorScreen` (**CU-04**, filtra los viajes asignados al chofer logueado), `DetalleViajeConductorScreen` (**CU-05 Iniciar Viaje**, **CU-06 Finalizar Viaje**, **CU-07 Abrir Ruta en Google Maps / Waze** con `Intent.ACTION_VIEW` y botón para escanear QR de patente) y `ReportarIncidenciaScreen` (**CU-08**, registra incidente en ruta y opcionalmente marca `requiereReasignacion = true`). |
+| `AdminEmpresaScreens.kt` | `cl.belmonte.app.view` | Contiene las 3 pantallas del **Administrador de Empresa Cliente (`ROLE_ADMIN_EMPRESA`)**: `MisCuposEmpresaScreen` (muestra el paquete contratado `2026-10` con barras de progreso de cupos contratados vs distribuidos vs consumidos), `RepartirCuposScreen` (**RN-12**, asigna o incrementa cupos a trabajadores de su empresa validando el tope contratado) y `CobrosEmpresaScreen` (**RN-14**, muestra paquetes mensuales, detalle de viajes con km extra y botón para generar el cobro `EXTRAS` de fin de mes). |
+| `EscanearQrScreen.kt` | `cl.belmonte.app.qr` | Pantalla del lector de código QR de patente del vehículo asignado. Valida la patente leída contra `VehiculoDao.obtenerPorPatente` y contra el `vehiculoId` del viaje antes de iniciar el traslado (**CU-05**). |
+
+---
+
+### 2. Recorrido por las 5 capas de una pantalla con navegación (Ejemplo: Conductor abre el detalle del Viaje #102 e inicia el viaje)
+
+1. **Capa `view` + `navigation` (`ViajesConductorScreen.kt` → `BelmonteNavHost.kt`):**
+   - El conductor Roberto Soto toca la tarjeta del **Viaje #102**.
+   - Se ejecuta `navController.navigate(Rutas.detalleViajeConductor(102))`, que navega a la ruta `"conductor/detalle_viaje/102"`.
+   - En `BelmonteNavHost.kt`, el bloque `composable(route = Rutas.CONDUCTOR_DETALLE_VIAJE, arguments = listOf(navArgument("viajeId") { type = NavType.IntType }))` extrae `val viajeId = backStackEntry.arguments?.getInt("viajeId")` y abre `DetalleViajeConductorScreen(viajeId = 102)`.
+2. **Capa `view` (`DetalleViajeConductorScreen.kt`):**
+   - Observa `viewModel.todosLosViajes.collectAsState()` y muestra el estado actual (`ASIGNADO`), origen, destino y patente `LK-JH-44`.
+   - Cuando el conductor presiona **"INICIAR VIAJE (PASAR A EN_CURSO)"**, la vista llama a `viewModel.iniciarViaje(102)`.
+3. **Capa `viewmodel` (`BelmonteViewModel.kt`):**
+   - `iniciarViaje(viajeId)` lanza `viewModelScope.launch` y llama a `viajeRepository.iniciarViaje(viajeId, usuarioId)`.
+4. **Capa `repository` (`ViajeRepository.kt`):**
+   - Verifica que el viaje esté en estado `2 (ASIGNADO)` (**RN-06**), actualiza el estado a `3 (EN_CURSO)` con la hora real de inicio e inserta el registro de auditoría en `historial_estados`.
+5. **Capa `dao` + Reactividad hacia la UI (`ViajeDao.kt`):**
+   - Como `ViajeDao.obtenerTodosLosViajes()` retorna `Flow<List<ViajeEntity>>`, apenas Room actualiza la fila del viaje #102 a `estadoId = 3`, `DetalleViajeConductorScreen` se recompone automáticamente: el badge cambia de **ASIGNADO** a **EN_CURSO** y el botón cambia automáticamente a **"FINALIZAR VIAJE (PASAR A FINALIZADO)"** sin recargar la pantalla.
+
+---
+
+### 3. Cinco preguntas técnicas probables del profesor (Fase 3 — Compose, Navegación e Intents)
+
+1. **Pregunta:** *¿Cómo pasan el `id` de un viaje desde la lista de viajes hacia la pantalla de detalle o de asignación en Navigation Compose?*  
+   **Respuesta:** Definimos la ruta con un placeholder en `Rutas.kt`, por ejemplo `"conductor/detalle_viaje/{viajeId}"`. En `BelmonteNavHost.kt` declaramos el argumento con `navArgument("viajeId") { type = NavType.IntType }`, lo leemos desde `backStackEntry.arguments?.getInt("viajeId")` y al navegar llamamos a `navController.navigate("conductor/detalle_viaje/$viajeId")`.
+
+2. **Pregunta:** *¿Por qué al hacer login usan `popUpTo(Rutas.LOGIN) { inclusive = true }` en el `navController.navigate`?*  
+   **Respuesta:** Para eliminar la pantalla de Login de la pila de navegación (`back stack`). Así, cuando el usuario ya entró al menú principal y presiona el botón físico "Atrás" del teléfono, no vuelve a la pantalla de Login a menos que presione explícitamente "Cerrar Sesión".
+
+3. **Pregunta:** *¿Cómo implementaron el Caso de Uso CU-07 para que el conductor abra la ruta hacia el destino en Google Maps o Waze?*  
+   **Respuesta:** En `ConductorScreens.kt` (función `abrirNavegacionExterna`) usamos un `Intent` implícito de Android (`Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=lat,lng(direccion)"))`). Primero intentamos abrir el paquete de Google Maps (`com.google.android.apps.maps`), y si el emulador no tiene la app instalada, tenemos un bloque `try/catch` de respaldo que abre la ruta directamente en el navegador con `https://www.google.com/maps/dir/?api=1&destination=...` para que nunca falle.
+
+4. **Pregunta:** *¿Para qué sirve `collectAsState()` en las pantallas de Jetpack Compose?*  
+   **Respuesta:** Convierte un `StateFlow` del `ViewModel` en un `State<T>` observable por Jetpack Compose. Cada vez que el `StateFlow` emite un nuevo valor (por ejemplo, cuando cambia la lista de viajes en Room), Compose detecta el cambio y ejecuta la **recomposición** únicamente de los componentes visuales que leen ese estado.
+
+5. **Pregunta:** *¿Cuál es la diferencia entre guardar un dato con `remember { mutableStateOf("") }` en la pantalla vs guardarlo en un `StateFlow` dentro del `ViewModel`?*  
+   **Respuesta:** `remember { mutableStateOf(...) }` guarda estado **efímero de la interfaz** (como el texto que el usuario está escribiendo en un `OutlinedTextField` o qué pestaña/chip está seleccionado). En cambio, el `StateFlow` del `ViewModel` guarda el **estado de negocio y los datos de Room**, sobrevive a cambios de configuración y comunica la vista con los repositorios.
+
+---
+
+### 4. Dos ejercicios de "Modifica esto en vivo" para practicar (Fase 3 — Pantallas y Navegación)
+
+#### Ejercicio práctico 1: Agregar una validación nueva o un campo visual a un formulario Compose
+* **Lo que puede pedir el profesor:** *"En la pantalla de Nueva Solicitud (`SolicitanteScreens.kt`), no permitan enviar la solicitud si las observaciones tienen menos de 5 caracteres (o agreguen un botón rápido para otro destino como 'Aeropuerto AMB')".*
+* **Pasos exactos (toma 1 minuto):**
+  1. Abrir `view/SolicitanteScreens.kt` y buscar `NuevaSolicitudScreen`.
+  2. Para agregar un destino rápido, en la lista `lugaresRapidos` agregar una línea:
+     ```kotlin
+     LugarPredefinido("Aeropuerto SCL", "Av. Armando Cortínez Oriente s/n, Pudahuel", -33.3930, -70.7858)
+     ```
+  3. O para validar un campo antes de guardar, en el `onClick` del `Button` `"CONFIRMAR Y ENVIAR SOLICITUD"`, agregar un `if` simple antes de `viewModel.crearSolicitudViaje(...)`.
+
+#### Ejercicio práctico 2: Agregar un botón en el menú principal que navegue a una pantalla nueva
+* **Lo que puede pedir el profesor:** *"Agreguen una pantalla simple de 'Acerca de Belmonte / Integrantes' y un botón en el inicio para abrirla".*
+* **Pasos exactos:**
+  1. En `navigation/Rutas.kt`, agregar `const val ACERCA_DE = "acerca_de"`.
+  2. En `navigation/BelmonteNavHost.kt`, agregar un bloque `composable(Rutas.ACERCA_DE) { ... }` con un `BelmonteCard` que muestre los nombres de los integrantes.
+  3. En `view/InicioRolScreen.kt`, agregar un `OutlinedButton(onClick = { onNavigate(Rutas.ACERCA_DE) }) { Text("Acerca de") }`.

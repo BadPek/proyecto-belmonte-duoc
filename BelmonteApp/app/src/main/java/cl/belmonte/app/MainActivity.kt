@@ -9,17 +9,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import cl.belmonte.app.navigation.BelmonteNavHost
 import cl.belmonte.app.ui.theme.BelmonteAppTheme
-import cl.belmonte.app.view.VerificacionRoomFase2Screen
 import cl.belmonte.app.viewmodel.BelmonteViewModel
 
 /**
- * Actividad principal de BelmonteApp.
+ * Actividad principal de BelmonteApp (Arquitectura Single-Activity con Navigation Compose).
  *
  * ¿QUÉ HACE ESTA CLASE?
- * Obtiene la instancia de BelmonteApplication, crea el BelmonteViewModel mediante su
- * ViewModelProvider.Factory manual (sin Hilt/Koin) y muestra la pantalla activa dentro
- * del tema corporativo BelmonteAppTheme.
+ * Inicializa el tema corporativo BelmonteAppTheme, obtiene el BelmonteViewModel mediante
+ * su ViewModelProvider.Factory manual y lanza el grafo de navegación BelmonteNavHost.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,7 +35,7 @@ class MainActivity : ComponentActivity() {
                     val belmonteViewModel: BelmonteViewModel = viewModel(
                         factory = BelmonteViewModel.provideFactory(app)
                     )
-                    VerificacionRoomFase2Screen(viewModel = belmonteViewModel)
+                    BelmonteNavHost(viewModel = belmonteViewModel)
                 }
             }
         }
