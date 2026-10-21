@@ -4,6 +4,7 @@ import cl.belmonte.app.dao.CobroDao
 import cl.belmonte.app.dao.VehiculoDao
 import cl.belmonte.app.dao.ViajeDao
 import cl.belmonte.app.model.AsignacionCupoEntity
+import cl.belmonte.app.model.CobroCupoEntity
 import cl.belmonte.app.model.CobroEntity
 import cl.belmonte.app.model.ResumenCupoEmpresa
 import cl.belmonte.app.model.ResumenCupoTrabajador
@@ -190,5 +191,86 @@ class CobroRepository(
             )
             return Result.success("Cobro EXTRAS de $periodo emitido por $$montoExtras CLP (RN-14).")
         }
+    }
+
+    /**
+     * Contrata un Plan de Suscripción Mensual (Básico, Grupos, Carga o Personalizado).
+     *
+     * ¿QUÉ HACE ESTA FUNCIÓN?
+     * Tal como indica el diseño del catálogo de planes:
+     * "Cuando la empresa compra uno, se copia al cobro del mes como ahora. Las asignaciones a trabajadores no cambian."
+     * 1. Actualiza (o crea) el cobro de tipo PAQUETE del mes con el precio del plan elegido.
+     * 2. Actualiza (o crea) las filas de cobro_cupos para Auto (1), Van (2) y Camión (3) con los cupos del plan,
+     *    manteniendo intactas las asignaciones existentes en asignaciones_cupo.
+     */
+    suspend fun contratarPlanSuscripcionMensual(
+        idEmpresa: Long,
+        nombrePlan: String,
+        cuposAuto: Int,
+        cuposVan: Int,
+        cuposCamion: Int,
+        precioMensualClp: Int,
+        periodo: String = "2026-10"
+    ): Result<String> {
+        if (cuposAuto <= 0 && cuposVan <= 0 && cuposCamion <= 0) {
+            return Result.failure(IllegalArgumentException("El plan debe incluir al menos 1 viaje en Auto, Van o Camión."))
+        }
+
+        val fechaHoy = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val paqueteActual = cobroDao.obtenerPaquetePagadoEmpresa(idEmpresa, periodo)
+
+        val idCobroPaquete = if (paqueteActual != null) {
+            cobroDao.actualizarCobro(
+                paqueteActual.copy(
+                    monto = precioMensualClp,
+                    estadoPago = "PAGADO",
+                    fechaEmision = fechaHoy,
+                    fechaPago = fechaHoy
+                )
+            )
+            paqueteActual.idCobro
+        } else {
+            cobroDao.insertarCobro(
+                CobroEntity(
+                    idEmpresa = idEmpresa,
+                    periodo = periodo,
+                    tipoCobro = "PAQUETE",
+                    monto = precioMensualClp,
+                    estadoPago = "PAGADO",
+                    fechaEmision = fechaHoy,
+                    fechaPago = fechaHoy
+                )
+            )
+        }
+
+        // Copiamos los cupos del plan a cobro_cupos (respetando lo ya repartido a trabajadores)
+        val mapaCuposPlan = mapOf(
+            1 to cuposAuto,
+            2 to cuposVan,
+            3 to cuposCamion
+        )
+
+        for ((idTipo, cantidadPlan) in mapaCuposPlan) {
+            val lineaExistente = cobroDao.obtenerCobroCupoPorCobroYTipo(idCobroPaquete, idTipo)
+            if (lineaExistente != null) {
+                val yaRepartidos = cobroDao.sumarCuposRepartidosPorLinea(lineaExistente.idCobroCupo)
+                val cantidadFinal = maxOf(cantidadPlan, yaRepartidos)
+                cobroDao.actualizarCobroCupo(
+                    lineaExistente.copy(cantidadViajes = cantidadFinal)
+                )
+            } else if (cantidadPlan > 0) {
+                cobroDao.insertarCobroCupo(
+                    CobroCupoEntity(
+                        idCobro = idCobroPaquete,
+                        idTipoVehiculo = idTipo,
+                        cantidadViajes = cantidadPlan
+                    )
+                )
+            }
+        }
+
+        return Result.success(
+            "Plan '$nombrePlan' aplicado al periodo $periodo ($cuposAuto Autos, $cuposVan Vans, $cuposCamion Camiones) por $$precioMensualClp CLP/mes."
+        )
     }
 }

@@ -417,6 +417,41 @@ class BelmonteViewModel(
         }
     }
 
+    /**
+     * Contrata un Plan de Suscripción Mensual (Básico, Grupos, Carga o Personalizado) y recarga
+     * inmediatamente los cupos contratados de la empresa en el StateFlow.
+     */
+    fun contratarPlanSuscripcion(
+        idEmpresa: Long,
+        nombrePlan: String,
+        cuposAuto: Int,
+        cuposVan: Int,
+        cuposCamion: Int,
+        precioMensualClp: Int
+    ) {
+        viewModelScope.launch {
+            val resultado = cobroRepository.contratarPlanSuscripcionMensual(
+                idEmpresa = idEmpresa,
+                nombrePlan = nombrePlan,
+                cuposAuto = cuposAuto,
+                cuposVan = cuposVan,
+                cuposCamion = cuposCamion,
+                precioMensualClp = precioMensualClp,
+                periodo = "2026-10"
+            )
+            resultado.fold(
+                onSuccess = { msg ->
+                    _cuposEmpresa.value = cobroRepository.obtenerResumenCuposEmpresa(idEmpresa)
+                    _usuarioActual.value?.let { recargarCuposSegunUsuario(it) }
+                    mostrarMensaje(msg, esError = false)
+                },
+                onFailure = { err ->
+                    mostrarMensaje(err.message ?: "No se pudo contratar el plan.", esError = true)
+                }
+            )
+        }
+    }
+
     // --- VALIDACIÓN DE CÓDIGO QR DEL VEHÍCULO (FASE 4) ---
 
     fun verificarQrVehiculo(idViaje: Long, textoQr: String) {

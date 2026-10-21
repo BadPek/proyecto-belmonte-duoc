@@ -72,8 +72,17 @@ interface CobroDao {
     @Query("SELECT * FROM cobro_cupos WHERE id_cobro_cupo = :idCobroCupo LIMIT 1")
     suspend fun obtenerCobroCupoPorId(idCobroCupo: Long): CobroCupoEntity?
 
+    @Query("SELECT * FROM cobro_cupos WHERE id_cobro = :idCobro AND id_tipo_vehiculo = :idTipoVehiculo LIMIT 1")
+    suspend fun obtenerCobroCupoPorCobroYTipo(idCobro: Long, idTipoVehiculo: Int): CobroCupoEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertarCobroCupo(detalle: CobroCupoEntity): Long
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarCobroCupos(detalles: List<CobroCupoEntity>)
+
+    @Update
+    suspend fun actualizarCobroCupo(detalle: CobroCupoEntity)
 
     // --- ASIGNACIONES DE CUPO A TRABAJADORES (ASIGNACIONES_CUPO) ---
 

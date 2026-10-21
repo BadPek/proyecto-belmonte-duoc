@@ -485,6 +485,14 @@ fun InicioRolScreen(
                         badgeTexto = "QR CAM",
                         onClick = { onNavigate("escanear_qr/103") }
                     )
+                    TarjetaMenuAccionModerna(
+                        titulo = "Planes de Suscripción y Cobros",
+                        subtitulo = "Plan Básico, Grupos, Carga y Personalizado + Extras del mes",
+                        icono = Icons.AutoMirrored.Filled.ReceiptLong,
+                        colorAcento = Color(0xFFA855F7),
+                        badgeTexto = "PLANES",
+                        onClick = { onNavigate(Rutas.COBROS_EMPRESA) }
+                    )
                 }
 
                 "ROLE_CONDUCTOR" -> {
@@ -516,6 +524,14 @@ fun InicioRolScreen(
                         onClick = { onNavigate(Rutas.SOLICITUDES_PENDIENTES) }
                     )
                     TarjetaMenuAccionModerna(
+                        titulo = "Planes de Suscripción y Cobros B2B",
+                        subtitulo = "Plan Básico (10A+1V), Grupos (10A+4V), Carga (10A+6V+5C) y Personalizado",
+                        icono = Icons.AutoMirrored.Filled.ReceiptLong,
+                        colorAcento = Color(0xFFA855F7),
+                        badgeTexto = "PLANES",
+                        onClick = { onNavigate(Rutas.COBROS_EMPRESA) }
+                    )
+                    TarjetaMenuAccionModerna(
                         titulo = "Verificador QR de Flota",
                         subtitulo = "Inspeccionar código QR de patentes KR-TW-21, LK-JH-44, PX-RT-89 y JT-KL-52",
                         icono = Icons.Default.QrCodeScanner,
@@ -527,6 +543,14 @@ fun InicioRolScreen(
 
                 "ROLE_ADMIN_EMPRESA" -> {
                     TarjetaMenuAccionModerna(
+                        titulo = "Planes de Suscripción y Cobros",
+                        subtitulo = "Plan Básico (10A+1V), Grupos (10A+4V), Carga (10A+6V+5C) y Personalizado",
+                        icono = Icons.AutoMirrored.Filled.ReceiptLong,
+                        colorAcento = RojoAccionBelmonte,
+                        badgeTexto = "PLANES",
+                        onClick = { onNavigate(Rutas.COBROS_EMPRESA) }
+                    )
+                    TarjetaMenuAccionModerna(
                         titulo = "Cupos Contratados por Vehículo",
                         subtitulo = "Paquete mensual 2026-10 • Disponibles, repartidos y consumidos",
                         icono = Icons.Default.Business,
@@ -535,19 +559,11 @@ fun InicioRolScreen(
                     )
                     TarjetaMenuAccionModerna(
                         titulo = "Repartir Cupos a Trabajadores",
-                        subtitulo = "RN-08 • Asignar cupos de Auto, Van o Camión a empleados",
+                        subtitulo = "RN-12 • Asignar cupos de Auto, Van o Camión a empleados",
                         icono = Icons.Default.GroupAdd,
                         colorAcento = ColorEstadoEnCurso,
                         badgeTexto = "CUPOS",
                         onClick = { onNavigate(Rutas.REPARTIR_CUPOS) }
-                    )
-                    TarjetaMenuAccionModerna(
-                        titulo = "Facturación y Cobros de Extras",
-                        subtitulo = "RN-14 • Paquete mensual y liquidación de kilómetros extra",
-                        icono = Icons.AutoMirrored.Filled.ReceiptLong,
-                        colorAcento = RojoAccionBelmonte,
-                        badgeTexto = "COBROS",
-                        onClick = { onNavigate(Rutas.COBROS_EMPRESA) }
                     )
                 }
             }

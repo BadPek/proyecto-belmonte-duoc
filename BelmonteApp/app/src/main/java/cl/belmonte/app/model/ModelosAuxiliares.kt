@@ -99,3 +99,73 @@ object LugaresDePrueba {
         )
     )
 }
+
+/**
+ * Modelo del Catálogo de Planes de Suscripción Mensual para Empresas Cliente.
+ *
+ * ¿QUÉ HACE ESTA CLASE?
+ * Representa los planes predefinidos de suscripción mensual (Básico, Grupos, Carga) y las tarifas
+ * unitarias para el Plan Personalizado. Cuando la empresa contrata uno de estos planes, sus cupos
+ * (cuposAuto, cuposVan, cuposCamion) y su precio se copian al cobro PAQUETE del mes en Room,
+ * manteniendo intactas las asignaciones a los trabajadores.
+ */
+data class PlanSuscripcionCatalogo(
+    val idPlan: Int,
+    val codigo: String,
+    val nombre: String,
+    val descripcionIncluye: String,
+    val cuposAuto: Int,
+    val cuposVan: Int,
+    val cuposCamion: Int,
+    val precioMensualClp: Int,
+    val etiquetaDestacada: String? = null
+)
+
+object CatalogoPlanesBelmonte {
+    // Tarifas por viaje unitario cuando la empresa arma un Plan Personalizado a medida
+    const val PRECIO_CUPO_AUTO_CLP = 28000
+    const val PRECIO_CUPO_VAN_CLP = 45000
+    const val PRECIO_CUPO_CAMION_CLP = 68000
+
+    val planesFijos = listOf(
+        PlanSuscripcionCatalogo(
+            idPlan = 1,
+            codigo = "PLAN_BASICO",
+            nombre = "Plan Básico",
+            descripcionIncluye = "10 viajes en Auto + 1 viaje en Van al mes",
+            cuposAuto = 10,
+            cuposVan = 1,
+            cuposCamion = 0,
+            precioMensualClp = 310000,
+            etiquetaDestacada = "EJECUTIVO"
+        ),
+        PlanSuscripcionCatalogo(
+            idPlan = 2,
+            codigo = "PLAN_GRUPOS",
+            nombre = "Plan Grupos",
+            descripcionIncluye = "10 viajes en Auto + 4 viajes en Van al mes",
+            cuposAuto = 10,
+            cuposVan = 4,
+            cuposCamion = 0,
+            precioMensualClp = 440000,
+            etiquetaDestacada = "MÁS POPULAR"
+        ),
+        PlanSuscripcionCatalogo(
+            idPlan = 3,
+            codigo = "PLAN_CARGA",
+            nombre = "Plan Carga & Flota",
+            descripcionIncluye = "10 viajes en Auto + 6 en Van + 5 en Camión al mes",
+            cuposAuto = 10,
+            cuposVan = 6,
+            cuposCamion = 5,
+            precioMensualClp = 850000,
+            etiquetaDestacada = "FULL FLOTA"
+        )
+    )
+
+    fun calcularPrecioPersonalizado(autos: Int, vans: Int, camiones: Int): Int {
+        return (autos.coerceAtLeast(0) * PRECIO_CUPO_AUTO_CLP) +
+            (vans.coerceAtLeast(0) * PRECIO_CUPO_VAN_CLP) +
+            (camiones.coerceAtLeast(0) * PRECIO_CUPO_CAMION_CLP)
+    }
+}
