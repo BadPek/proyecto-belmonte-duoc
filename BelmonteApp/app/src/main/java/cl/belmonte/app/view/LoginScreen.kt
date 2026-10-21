@@ -1,32 +1,46 @@
 package cl.belmonte.app.view
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
+import androidx.compose.material.icons.filled.BusinessCenter
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonPinCircle
+import androidx.compose.material.icons.filled.SupportAgent
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -36,262 +50,442 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cl.belmonte.app.model.UsuarioEntity
+import cl.belmonte.app.database.DatosInicialesBelmonte
 import cl.belmonte.app.ui.theme.AzulBelmonte
 import cl.belmonte.app.ui.theme.AzulBelmonteClaro
 import cl.belmonte.app.ui.theme.AzulMarinoBelmonte
 import cl.belmonte.app.ui.theme.ColorEstadoCancelado
+import cl.belmonte.app.ui.theme.ColorEstadoEnCurso
+import cl.belmonte.app.ui.theme.ColorEstadoPendiente
 import cl.belmonte.app.ui.theme.FondoOscuro
 import cl.belmonte.app.ui.theme.RojoAccionBelmonte
-import cl.belmonte.app.view.components.BelmonteCard
+import cl.belmonte.app.ui.theme.SuperficieOscura
+import cl.belmonte.app.ui.theme.TextoBlanco
+import cl.belmonte.app.ui.theme.TextoSecundarioOscuro
 import cl.belmonte.app.viewmodel.BelmonteViewModel
 
 /**
- * Pantalla de Inicio de Sesión (CU-01) — Traslados Belmonte SpA.
+ * Pantalla de Inicio de Sesión (Caso de Uso CU-01: Iniciar Sesión).
  *
  * ¿QUÉ HACE ESTA PANTALLA?
- * Permite al usuario ingresar su Correo o RUT y su Contraseña para autenticarse contra la
- * tabla local "usuarios" de Room. Según el rol del usuario autenticado (ROLE_SOLICITANTE,
- * ROLE_ADMIN, ROLE_CONDUCTOR o ROLE_ADMIN_EMPRESA), navega al menú principal de su perfil.
- *
- * ¿POR QUÉ TIENE BOTONES DE ACCESO RÁPIDO DE DEMOSTRACIÓN ABAJO?
- * Para que durante el video de 7 minutos y la defensa en vivo con el profesor puedan cambiar
- * entre los 4 roles con un solo toque, sin perder tiempo tipeando correos largos en el emulador.
+ * Presenta una interfaz móvil moderna (inspirada en maquetas_belmonte.html y Awesome Jetpack Compose)
+ * con encabezado en degradado corporativo (#002B5B -> #2563EB), campos con íconos interactivos,
+ * botón de acción principal (#E84C3D) y una cuadrícula 2x2 de tarjetas de acceso rápido por rol.
  */
 @Composable
 fun LoginScreen(
     viewModel: BelmonteViewModel,
-    onLoginSuccess: (UsuarioEntity) -> Unit
+    onLoginSuccess: () -> Unit
 ) {
-    var identificador by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var mostrarPassword by remember { mutableStateOf(false) }
-
     val mensajeFeedback by viewModel.mensajeFeedback.collectAsState()
     val esError by viewModel.esErrorFeedback.collectAsState()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(AzulMarinoBelmonte, FondoOscuro)
-                )
-            )
-    ) {
+    var identificador by remember { mutableStateOf("daniela.munoz@andessur.test") }
+    var password by remember { mutableStateOf(DatosInicialesBelmonte.CLAVE_PRUEBA) }
+    var mostrarPassword by remember { mutableStateOf(false) }
+
+    Scaffold(
+        containerColor = FondoOscuro
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp)
+                .padding(innerPadding)
                 .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Ícono y encabezado corporativo (inspirado en Pantalla 1 de maquetas_belmonte.html)
-            Icon(
-                imageVector = Icons.Default.DirectionsCar,
-                contentDescription = "Logo Belmonte",
-                tint = AzulBelmonteClaro,
-                modifier = Modifier.height(56.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "BELMONTE SpA",
-                style = MaterialTheme.typography.headlineLarge,
-                color = Color.White,
-                letterSpacing = 1.5.sp
-            )
-            Text(
-                text = "Plataforma de Traslados Corporativos",
-                style = MaterialTheme.typography.bodyMedium,
-                color = AzulBelmonteClaro,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Tarjeta principal de Login
-            BelmonteCard(colorBorde = AzulBelmonte) {
-                Text(
-                    text = "Iniciar Sesión (CU-01)",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Ingresa tu correo corporativo o RUT",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = identificador,
-                    onValueChange = {
-                        identificador = it
-                        viewModel.limpiarMensaje()
-                    },
-                    label = { Text("Correo o RUT (Ej: 16473920-1)") },
-                    leadingIcon = {
-                        Icon(Icons.Default.Person, contentDescription = null)
-                    },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = {
-                        password = it
-                        viewModel.limpiarMensaje()
-                    },
-                    label = { Text("Contraseña") },
-                    leadingIcon = {
-                        Icon(Icons.Default.Lock, contentDescription = null)
-                    },
-                    trailingIcon = {
-                        IconButton(onClick = { mostrarPassword = !mostrarPassword }) {
+            // 1. HERO HEADER CON DEGRADADO CORPORATIVO (#002B5B -> #2563EB)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                AzulMarinoBelmonte,
+                                AzulBelmonte.copy(alpha = 0.85f),
+                                FondoOscuro
+                            )
+                        )
+                    )
+                    .padding(horizontal = 24.dp, vertical = 26.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Surface(
+                        modifier = Modifier.size(74.dp),
+                        shape = CircleShape,
+                        color = Color.White.copy(alpha = 0.14f),
+                        border = BorderStroke(2.dp, AzulBelmonteClaro.copy(alpha = 0.7f))
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                imageVector = if (mostrarPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = "Mostrar u ocultar contraseña"
+                                imageVector = Icons.Default.DirectionsCar,
+                                contentDescription = "Logo Belmonte",
+                                tint = Color.White,
+                                modifier = Modifier.size(38.dp)
                             )
                         }
-                    },
-                    visualTransformation = if (mostrarPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                    }
 
-                // Mensaje de error si las credenciales fallan
-                if (mensajeFeedback != null && esError) {
                     Spacer(modifier = Modifier.height(10.dp))
+
                     Text(
-                        text = mensajeFeedback ?: "",
-                        color = ColorEstadoCancelado,
+                        text = "BELMONTE SpA",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = TextoBlanco,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.2.sp
+                    )
+                    Text(
+                        text = "App de Traslados Corporativos B2B",
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
+                        color = AzulBelmonteClaro
                     )
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                // Botón principal de login con el color rojo coral de la maqueta (#E84C3D)
-                Button(
-                    onClick = {
-                        viewModel.iniciarSesion(identificador, password) { usuario ->
-                            onLoginSuccess(usuario)
+                    Surface(
+                        color = ColorEstadoEnCurso.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(50),
+                        border = BorderStroke(1.dp, ColorEstadoEnCurso.copy(alpha = 0.6f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.VerifiedUser,
+                                contentDescription = null,
+                                tint = ColorEstadoEnCurso,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "Room Local DB Activa • QR CameraX",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ColorEstadoEnCurso
+                            )
                         }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = RojoAccionBelmonte)
-                ) {
-                    Text(
-                        text = "INICIAR SESIÓN",
-                        style = MaterialTheme.typography.labelLarge
-                    )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Tarjeta de acceso rápido para probar los 4 roles del script SQL con un toque
-            BelmonteCard {
-                Text(
-                    text = " Cuentas de Prueba (script_belmonte_db_v3.sql)",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = AzulBelmonteClaro
-                )
-                Text(
-                    text = "Toca un perfil para autocompletar e ingresar (Clave: Password123*)",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                val cuentasDemo = listOf(
-                    Triple(
-                        "1. Solicitante — Daniela Muñoz (Minera Andes Sur)",
-                        "daniela.munoz@andessur.test",
-                        "Pide viajes, ve sus cupos, seguimiento y escanea QR"
-                    ),
-                    Triple(
-                        "2. Admin Belmonte — Valeria Fuentes",
-                        "valeria.admin@belmonte.test",
-                        "Ve solicitudes pendientes, asigna y reasigna chofer/auto"
-                    ),
-                    Triple(
-                        "3. Conductor — Miguel Rojas (Viaje #102 Asignado)",
-                        "miguel.rojas@belmonte.test",
-                        "Inicia/finaliza viajes, navega con Maps/Waze, reporta incidencia"
-                    ),
-                    Triple(
-                        "4. Conductor — Pedro Soto (Viaje #103 En Curso)",
-                        "pedro.soto@belmonte.test",
-                        "Tiene el viaje #103 en curso tras reasignación por panne"
-                    ),
-                    Triple(
-                        "5. Admin Empresa — Tomás Herrera (Minera Andes Sur)",
-                        "tomas.herrera@andessur.test",
-                        "Ve cupos contratados/repartidos/usados, reparte cupos y ve cobros"
-                    )
-                )
-
-                cuentasDemo.forEachIndexed { idx, (titulo, correo, subtitulo) ->
-                    if (idx > 0) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 6.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            identificador = correo
-                            password = "Password123*"
-                            viewModel.iniciarSesion(correo, "Password123*") { usuario ->
-                                onLoginSuccess(usuario)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
+            // 2. TARJETA DEL FORMULARIO DE ACCESO (CU-01)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = SuperficieOscura),
+                    border = BorderStroke(1.dp, AzulBelmonte.copy(alpha = 0.45f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Column(
+                        Text(
+                            text = "Iniciar Sesión (CU-01)",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextoBlanco,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+
+                        OutlinedTextField(
+                            value = identificador,
+                            onValueChange = { identificador = it },
+                            label = { Text("Correo corporativo o RUT") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Email,
+                                    contentDescription = null,
+                                    tint = AzulBelmonteClaro
+                                )
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(14.dp),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.Start
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = AzulBelmonte,
+                                unfocusedBorderColor = TextoSecundarioOscuro.copy(alpha = 0.35f),
+                                focusedTextColor = TextoBlanco,
+                                unfocusedTextColor = TextoBlanco
+                            )
+                        )
+
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it },
+                            label = { Text("Contraseña") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = AzulBelmonteClaro
+                                )
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { mostrarPassword = !mostrarPassword }) {
+                                    Icon(
+                                        imageVector = if (mostrarPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = "Mostrar contraseña",
+                                        tint = TextoSecundarioOscuro
+                                    )
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(14.dp),
+                            visualTransformation = if (mostrarPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = AzulBelmonte,
+                                unfocusedBorderColor = TextoSecundarioOscuro.copy(alpha = 0.35f),
+                                focusedTextColor = TextoBlanco,
+                                unfocusedTextColor = TextoBlanco
+                            )
+                        )
+
+                        if (mensajeFeedback != null && esError) {
+                            Surface(
+                                color = ColorEstadoCancelado.copy(alpha = 0.16f),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, ColorEstadoCancelado),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = mensajeFeedback ?: "",
+                                    color = ColorEstadoCancelado,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(10.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Button(
+                            onClick = {
+                                viewModel.iniciarSesion(identificador, password) {
+                                    onLoginSuccess()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = RojoAccionBelmonte),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
                         ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Login,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = titulo,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
+                                text = "INICIAR SESIÓN",
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 14.sp,
                                 color = Color.White
                             )
-                            Text(
-                                text = subtitulo,
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
                     }
                 }
+
+                // 3. CUADRÍCULA 2x2 DE ACCESO RÁPIDO POR ROL (1 CLIC)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Acceso Rápido por Rol (1 Clic)",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextoBlanco,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Clave: Password123*",
+                            fontSize = 11.sp,
+                            color = AzulBelmonteClaro,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        TarjetaRolDemoModerna(
+                            modifier = Modifier.weight(1f),
+                            rolEtiqueta = "SOLICITANTE",
+                            nombre = "Daniela Muñoz",
+                            detalle = "Minera Andes Sur",
+                            icono = Icons.Default.PersonPinCircle,
+                            colorAcento = AzulBelmonte,
+                            onClick = {
+                                identificador = "daniela.munoz@andessur.test"
+                                password = DatosInicialesBelmonte.CLAVE_PRUEBA
+                                viewModel.iniciarSesion(identificador, password) {
+                                    onLoginSuccess()
+                                }
+                            }
+                        )
+                        TarjetaRolDemoModerna(
+                            modifier = Modifier.weight(1f),
+                            rolEtiqueta = "CONDUCTOR",
+                            nombre = "Pedro Soto",
+                            detalle = "Viaje #103 / QR",
+                            icono = Icons.Default.DirectionsCar,
+                            colorAcento = ColorEstadoEnCurso,
+                            onClick = {
+                                identificador = "pedro.soto@belmonte.test"
+                                password = DatosInicialesBelmonte.CLAVE_PRUEBA
+                                viewModel.iniciarSesion(identificador, password) {
+                                    onLoginSuccess()
+                                }
+                            }
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        TarjetaRolDemoModerna(
+                            modifier = Modifier.weight(1f),
+                            rolEtiqueta = "ADMIN BELMONTE",
+                            nombre = "Valeria Fuentes",
+                            detalle = "Asigna y Reasigna",
+                            icono = Icons.Default.SupportAgent,
+                            colorAcento = ColorEstadoPendiente,
+                            onClick = {
+                                identificador = "valeria.admin@belmonte.test"
+                                password = DatosInicialesBelmonte.CLAVE_PRUEBA
+                                viewModel.iniciarSesion(identificador, password) {
+                                    onLoginSuccess()
+                                }
+                            }
+                        )
+                        TarjetaRolDemoModerna(
+                            modifier = Modifier.weight(1f),
+                            rolEtiqueta = "ADMIN EMPRESA",
+                            nombre = "Tomás Herrera",
+                            detalle = "Cupos y Cobros",
+                            icono = Icons.Default.BusinessCenter,
+                            colorAcento = Color(0xFFA855F7),
+                            onClick = {
+                                identificador = "tomas.herrera@andessur.test"
+                                password = DatosInicialesBelmonte.CLAVE_PRUEBA
+                                viewModel.iniciarSesion(identificador, password) {
+                                    onLoginSuccess()
+                                }
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun TarjetaRolDemoModerna(
+    modifier: Modifier = Modifier,
+    rolEtiqueta: String,
+    nombre: String,
+    detalle: String,
+    icono: ImageVector,
+    colorAcento: Color,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier.clickable { onClick() },
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = SuperficieOscura),
+        border = BorderStroke(1.dp, colorAcento.copy(alpha = 0.45f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    modifier = Modifier.size(38.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = colorAcento.copy(alpha = 0.18f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = icono,
+                            contentDescription = rolEtiqueta,
+                            tint = colorAcento,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+
+                Surface(
+                    color = colorAcento.copy(alpha = 0.16f),
+                    shape = RoundedCornerShape(50)
+                ) {
+                    Text(
+                        text = rolEtiqueta,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = colorAcento,
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = nombre,
+                style = MaterialTheme.typography.titleSmall,
+                color = TextoBlanco,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = detalle,
+                fontSize = 11.sp,
+                color = TextoSecundarioOscuro
+            )
         }
     }
 }

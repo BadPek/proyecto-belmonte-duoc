@@ -65,6 +65,9 @@ import cl.belmonte.app.ui.theme.ColorWaze
 import cl.belmonte.app.ui.theme.RojoAccionBelmonte
 import cl.belmonte.app.view.components.BadgeEstadoViaje
 import cl.belmonte.app.view.components.BelmonteCard
+import cl.belmonte.app.view.components.ChipVehiculoBelmonte
+import cl.belmonte.app.view.components.LineaRutaTimeline
+import cl.belmonte.app.view.components.MapaRutaVisualCard
 import cl.belmonte.app.viewmodel.BelmonteViewModel
 
 /**
@@ -163,32 +166,52 @@ fun ViajesConductorScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Viaje #${viaje.idViaje} · ${viaje.nombreTipoVehiculo}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Viaje #${viaje.idViaje}",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            ChipVehiculoBelmonte(
+                                idTipoVehiculo = viaje.idTipoVehiculo,
+                                textoPersonalizado = viaje.nombreTipoVehiculo
+                            )
+                        }
                         BadgeEstadoViaje(codigoEstado = viaje.codigoEstado)
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Pasajero: ${viaje.nombrePasajero}", fontWeight = FontWeight.Bold)
-                    Text("Origen: ${viaje.direccionOrigen}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Destino: ${viaje.direccionDestino}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Fecha y Hora: ${viaje.fechaServicio} — ${viaje.horaServicio} hrs", color = AzulBelmonteClaro)
+                    Text("Pasajero: ${viaje.nombrePasajero} • ${viaje.fechaServicio} (${viaje.horaServicio})", fontWeight = FontWeight.Bold)
                     if (auto != null) {
-                        Text("Vehículo: ${auto.marca} ${auto.modelo} (${auto.patente})")
+                        Text(
+                            text = "Vehículo: ${auto.marca} ${auto.modelo} • Patente ${auto.patente}",
+                            color = AzulBelmonteClaro,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LineaRutaTimeline(
+                        origen = viaje.direccionOrigen,
+                        destino = viaje.direccionDestino,
+                        distanciaKm = viaje.distanciaKm,
+                        kmExtra = viaje.kmExtra,
+                        cargoExtra = viaje.cargoExtra
+                    )
 
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Button(
                         onClick = { onVerDetalleViaje(viaje.idViaje) },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = AzulBelmonte)
                     ) {
-                        Text("VER DETALLE Y NAVEGACIÓN")
+                        Text("VER DETALLE Y NAVEGACIÓN GPS", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -307,43 +330,56 @@ fun DetalleViajeConductorScreen(
                 }
             }
 
-            // 1. Encabezado del servicio (inspirado en Pantalla 3 de maquetas_belmonte.html)
+            // 1. Encabezado del servicio + Mapa GPS (inspirado en Pantalla 3 de maquetas_belmonte.html)
             BelmonteCard(colorBorde = AzulBelmonte) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Traslado Corporativo #${v.idViaje}",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Viaje #${v.idViaje}",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        ChipVehiculoBelmonte(
+                            idTipoVehiculo = v.idTipoVehiculo,
+                            textoPersonalizado = v.nombreTipoVehiculo
+                        )
+                    }
                     BadgeEstadoViaje(codigoEstado = v.codigoEstado)
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
-                Text("Pasajero: ${v.nombrePasajero} (${v.cantidadPasajeros} pas.)", fontWeight = FontWeight.Bold)
-                Text("Fecha/Hora: ${v.fechaServicio} · ${v.horaServicio} hrs")
-                if (auto != null) {
-                    Text("Vehículo: ${auto.marca} ${auto.modelo} — Patente: ${auto.patente}", color = AzulBelmonteClaro)
-                }
+                MapaRutaVisualCard(
+                    latOrigen = v.latitudOrigen,
+                    lngOrigen = v.longitudOrigen,
+                    latDestino = v.latitudDestino,
+                    lngDestino = v.longitudDestino,
+                    distanciaKm = v.distanciaKm
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                LineaRutaTimeline(
+                    origen = v.direccionOrigen,
+                    destino = v.direccionDestino,
+                    distanciaKm = v.distanciaKm,
+                    kmExtra = v.kmExtra,
+                    cargoExtra = v.cargoExtra
+                )
 
                 Spacer(modifier = Modifier.height(10.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("O", color = RojoAccionBelmonte, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Origen: ${v.direccionOrigen} (${v.latitudOrigen}, ${v.longitudOrigen})")
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("D", color = ColorEstadoEnCurso, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Destino: ${v.direccionDestino} (${v.latitudDestino}, ${v.longitudDestino})")
+                Text("Pasajero: ${v.nombrePasajero} (${v.cantidadPasajeros} pas.) • ${v.fechaServicio} ${v.horaServicio}", fontWeight = FontWeight.Bold)
+                if (auto != null) {
+                    Text("Vehículo: ${auto.marca} ${auto.modelo} — Patente: ${auto.patente}", color = AzulBelmonteClaro, fontWeight = FontWeight.SemiBold)
                 }
 
                 if (!v.numeroVuelo.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "Vuelo: ${v.numeroVuelo}",
                         color = AzulBelmonteClaro,
@@ -369,7 +405,8 @@ fun DetalleViajeConductorScreen(
                             val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${v.telefonoPasajero}"))
                             context.startActivity(dialIntent)
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Default.Call, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))

@@ -67,6 +67,9 @@ import cl.belmonte.app.ui.theme.ColorEstadoPendiente
 import cl.belmonte.app.ui.theme.RojoAccionBelmonte
 import cl.belmonte.app.view.components.BadgeEstadoViaje
 import cl.belmonte.app.view.components.BelmonteCard
+import cl.belmonte.app.view.components.ChipVehiculoBelmonte
+import cl.belmonte.app.view.components.LineaRutaTimeline
+import cl.belmonte.app.view.components.MapaRutaVisualCard
 import cl.belmonte.app.viewmodel.BelmonteViewModel
 import kotlin.math.roundToInt
 
@@ -375,22 +378,33 @@ fun NuevaSolicitudScreen(
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Resumen del cálculo automático de distancia y km extra (RN-11)
+                // Resumen del cálculo automático de distancia y km extra (RN-11) con mapa visual
                 Text(
-                    text = "Cálculo Automático de Ruta (Haversine — RN-11):",
+                    text = "Vista Previa de Ruta y Cálculo Haversine (RN-11):",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = AzulBelmonteClaro
                 )
-                Text("• Distancia en línea recta: $distanciaKm km (Tope incluido: $topeKm km)")
-                Text(
-                    text = "• Kilómetros extra: $kmExtra km → Cargo extra empresa: $$cargoExtraEstimado CLP",
-                    color = if (cargoExtraEstimado > 0) ColorEstadoPendiente else ColorEstadoEnCurso,
-                    fontWeight = FontWeight.SemiBold
+                Spacer(modifier = Modifier.height(8.dp))
+                MapaRutaVisualCard(
+                    latOrigen = latOrigen,
+                    lngOrigen = lngOrigen,
+                    latDestino = latDestino,
+                    lngDestino = lngDestino,
+                    distanciaKm = distanciaKm
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                LineaRutaTimeline(
+                    origen = direccionOrigen,
+                    destino = direccionDestino,
+                    distanciaKm = distanciaKm,
+                    kmExtra = kmExtra,
+                    cargoExtra = cargoExtraEstimado
+                )
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "El trabajador no paga nada; el viaje consume 1 cupo mensual.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "Tope incluido: $topeKm km • El trabajador no paga nada (consume 1 cupo mensual).",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -526,26 +540,38 @@ fun MisViajesSolicitanteScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Viaje #${viaje.idViaje} · ${viaje.nombreTipoVehiculo}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = AzulBelmonteClaro
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Viaje #${viaje.idViaje}",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            ChipVehiculoBelmonte(
+                                idTipoVehiculo = viaje.idTipoVehiculo,
+                                textoPersonalizado = viaje.nombreTipoVehiculo
+                            )
+                        }
                         BadgeEstadoViaje(codigoEstado = viaje.codigoEstado)
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Pasajero: ${viaje.nombrePasajero}", fontWeight = FontWeight.SemiBold)
-                    Text("Fecha: ${viaje.fechaServicio} · Hora: ${viaje.horaServicio}")
-                    Text(
-                        text = "Origen: ${viaje.direccionOrigen}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Text("Pasajero: ${viaje.nombrePasajero} • ${viaje.fechaServicio} (${viaje.horaServicio})", fontWeight = FontWeight.SemiBold)
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LineaRutaTimeline(
+                        origen = viaje.direccionOrigen,
+                        destino = viaje.direccionDestino,
+                        distanciaKm = viaje.distanciaKm,
+                        kmExtra = viaje.kmExtra,
+                        cargoExtra = viaje.cargoExtra
                     )
-                    Text(
-                        text = "Destino: ${viaje.direccionDestino}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+
                     if (!viaje.numeroVuelo.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = "Vuelo: ${viaje.numeroVuelo}",
                             color = ColorEstadoAsignado,
@@ -553,17 +579,13 @@ fun MisViajesSolicitanteScreen(
                         )
                     }
                     if (!viaje.descripcionCarga.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = "Carga: ${viaje.descripcionCarga}",
                             color = ColorEstadoPendiente,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
-                    Text(
-                        text = "Distancia: ${viaje.distanciaKm} km | Km Extra: ${viaje.kmExtra} km ($${viaje.cargoExtra} CLP)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = AzulBelmonteClaro
-                    )
 
                     Spacer(modifier = Modifier.height(10.dp))
 
@@ -574,17 +596,17 @@ fun MisViajesSolicitanteScreen(
                         Button(
                             onClick = { onVerDetalle(viaje.idViaje) },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = AzulBelmonte)
                         ) {
-                            Text("Ver Seguimiento")
+                            Text("Ver Seguimiento", fontWeight = FontWeight.Bold)
                         }
 
                         if (viaje.idVehiculo != null) {
                             OutlinedButton(
                                 onClick = { onEscanearQr(viaje.idViaje) },
                                 modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(12.dp)
                             ) {
                                 Icon(Icons.Default.QrCodeScanner, contentDescription = null)
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -604,7 +626,7 @@ fun MisViajesSolicitanteScreen(
                                 )
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, RojoAccionBelmonte)
                         ) {
                             Text(
@@ -675,36 +697,54 @@ fun DetalleSeguimientoScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. Resumen general del traslado
+            // 1. Resumen general del traslado + Mapa visual
             BelmonteCard(colorBorde = AzulBelmonte) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Viaje #${v.idViaje} · ${v.nombreTipoVehiculo}",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Viaje #${v.idViaje}",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        ChipVehiculoBelmonte(
+                            idTipoVehiculo = v.idTipoVehiculo,
+                            textoPersonalizado = v.nombreTipoVehiculo
+                        )
+                    }
                     BadgeEstadoViaje(codigoEstado = v.codigoEstado)
                 }
                 Spacer(modifier = Modifier.height(10.dp))
-                Text("Pasajero: ${v.nombrePasajero} (${v.cantidadPasajeros} pas.)", fontWeight = FontWeight.SemiBold)
-                Text("Fecha y Hora: ${v.fechaServicio} a las ${v.horaServicio}")
-                Text("Origen: ${v.direccionOrigen}")
-                Text("Destino: ${v.direccionDestino}")
+                MapaRutaVisualCard(
+                    latOrigen = v.latitudOrigen,
+                    lngOrigen = v.longitudOrigen,
+                    latDestino = v.latitudDestino,
+                    lngDestino = v.longitudDestino,
+                    distanciaKm = v.distanciaKm
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                LineaRutaTimeline(
+                    origen = v.direccionOrigen,
+                    destino = v.direccionDestino,
+                    distanciaKm = v.distanciaKm,
+                    kmExtra = v.kmExtra,
+                    cargoExtra = v.cargoExtra
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Pasajero: ${v.nombrePasajero} (${v.cantidadPasajeros} pas.) • ${v.fechaServicio} ${v.horaServicio}", fontWeight = FontWeight.SemiBold)
                 if (!v.numeroVuelo.isNullOrBlank()) {
                     Text("Vuelo Asociado: ${v.numeroVuelo}", color = AzulBelmonteClaro, fontWeight = FontWeight.Bold)
                 }
                 if (!v.descripcionCarga.isNullOrBlank()) {
                     Text("Carga: ${v.descripcionCarga}", color = ColorEstadoPendiente, fontWeight = FontWeight.SemiBold)
                 }
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "Distancia: ${v.distanciaKm} km | Km Extra: ${v.kmExtra} km | Cargo Extra: $${v.cargoExtra} CLP",
-                    color = AzulBelmonteClaro
-                )
             }
 
             // 2. Tarjeta de Conductor y Vehículo asignado (CU-09 — RN-11)

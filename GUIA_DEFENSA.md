@@ -230,3 +230,67 @@
   1. En `navigation/Rutas.kt`, agregar `const val ACERCA_DE = "acerca_de"`.
   2. En `navigation/BelmonteNavHost.kt`, agregar un bloque `composable(Rutas.ACERCA_DE) { ... }` con un `BelmonteCard` que muestre los nombres de los integrantes.
   3. En `view/InicioRolScreen.kt`, agregar un `OutlinedButton(onClick = { onNavigate(Rutas.ACERCA_DE) }) { Text("Acerca de") }`.
+
+---
+
+## Fase 4: Lector de Códigos QR con CameraX + ML Kit Barcode Scanning + Rediseño UI Moderno
+
+### 1. Tabla de archivos de la Fase 4 y qué hace cada uno
+
+| Archivo | Paquete / Ruta | ¿Qué hace y por qué existe? |
+| :--- | :--- | :--- |
+| `QrAnalyzer.kt` | `cl.belmonte.app.qr` | Implementa `ImageAnalysis.Analyzer` de CameraX. Recibe cada fotograma (`ImageProxy`) de la cámara, lo transforma en `InputImage` de Google ML Kit (`BarcodeScanning`) configurado con `Barcode.FORMAT_QR_CODE` y, al detectar una patente, notifica a la pantalla Compose y cierra el `imageProxy`. |
+| `EscanearQrScreen.kt` | `cl.belmonte.app.qr` | Pantalla del escáner QR que solicita el permiso `Manifest.permission.CAMERA` en tiempo de ejecución, muestra la vista previa en vivo con `PreviewView` dentro de `AndroidView`, dibuja el marco óptico (esquinas luminosas y línea láser) con `Canvas` y valida la patente contra Room (`VehiculoRepository.verificarPatenteQrParaViaje`). Incluye además las 4 tarjetas QR interactivas para demostración en emulador. |
+| `BelmonteCard.kt` | `cl.belmonte.app.view.components` | Sistema de diseño moderno de Jetpack Compose: `BelmonteCard` con franja lateral de acento (`drawBehind`), `HeroBannerBelmonte` con degradado diagonal, `LineaRutaTimeline` (conector visual Origen → Destino estilo Uber/Cabify), `MapaRutaVisualCard` (mapa vectorial en `Canvas` con ruta GPS), `ChipVehiculoBelmonte` y `TarjetaMenuAccionModerna`. |
+| `QR_*.png` (4 archivos) | `C:\dev\belmonte\qr_patentes_prueba\` | Imágenes PNG de 400x400 px con los códigos QR reales de los 4 vehículos de prueba del script SQL: `KR-TW-21` (Toyota Corolla), `LK-JH-44` (Hyundai Staria Van), `PX-RT-89` (Mercedes Vito Van) y `JT-KL-52` (Chevrolet NPR Camión). |
+
+---
+
+### 2. Recorrido por las 5 capas de la lectura de un Código QR (Fase 4)
+
+1. **Capa `qr` (`QrAnalyzer.kt` + `EscanearQrScreen.kt`):**
+   - `VistaCamaraQrEnVivo` vincula `Preview` e `ImageAnalysis` al `ProcessCameraProvider` y al ciclo de vida (`LocalLifecycleOwner`).
+   - Cuando la cámara enfoca el código QR de la patente (por ejemplo `"KR-TW-21"` para el Viaje #103), `QrAnalyzer.analyze(imageProxy)` extrae `primerQr = "KR-TW-21"` y ejecuta el callback `onQrLeido("KR-TW-21")`.
+2. **Capa `qr` → `viewmodel` (`BelmonteViewModel.kt`):**
+   - `EscanearQrScreen` llama a `viewModel.verificarQrVehiculo(idViaje = 103, textoQr = "KR-TW-21")`.
+3. **Capa `repository` (`VehiculoRepository.kt`):**
+   - `verificarPatenteQrParaViaje(103, "KR-TW-21")` consulta el viaje `#103` y el vehículo en Room, normaliza el texto y compara si la patente escaneada coincide con el `idVehiculo` asignado a ese viaje.
+4. **Capa `dao` (`VehiculoDao.kt` + `ViajeDao.kt`):**
+   - Ejecuta `SELECT * FROM viajes WHERE id_viaje = :idViaje` y `SELECT * FROM vehiculos WHERE patente = :patente`.
+5. **Retorno reactivo hacia `EscanearQrScreen.kt`:**
+   - `_resultadoQr.value` se actualiza con `Pair(true, "✅ VEHÍCULO VERIFICADO...")` (o `false` si la patente pertenece a otro vehículo) y Compose dibuja la tarjeta verde de confirmación o roja de alerta.
+
+---
+
+### 3. Cinco preguntas técnicas probables del profesor (Fase 4 — CameraX, Permisos y ML Kit)
+
+1. **Pregunta:** *¿Por qué es obligatorio llamar a `imageProxy.close()` dentro del bloque `.addOnCompleteListener` en `QrAnalyzer.kt`?*  
+   **Respuesta:** Porque configuramos `ImageAnalysis` con `STRATEGY_KEEP_ONLY_LATEST`. Si no cerramos el `imageProxy` cuando ML Kit termina de procesar el fotograma, CameraX asume que seguimos ocupando el buffer de memoria y deja de enviar nuevos fotogramas, congelando la detección de QR.
+
+2. **Pregunta:** *¿Cómo integran la vista de cámara de CameraX (`PreviewView`), que es una vista clásica de Android, dentro de Jetpack Compose?*  
+   **Respuesta:** Usando el composable `AndroidView(factory = { context -> PreviewView(context) })` en `EscanearQrScreen.kt`. `AndroidView` es el puente de interoperabilidad oficial de Jetpack Compose para embeber vistas nativas del SDK de Android.
+
+3. **Pregunta:** *¿Cómo piden el permiso de cámara al usuario en Jetpack Compose?*  
+   **Respuesta:** Primero declaramos `<uses-permission android:name="android.permission.CAMERA" />` en `AndroidManifest.xml`, y luego en `EscanearQrScreen.kt` usamos `rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission())` para solicitar `Manifest.permission.CAMERA` en tiempo de ejecución.
+
+4. **Pregunta:** *¿Por qué filtraron ML Kit con `setBarcodeFormats(Barcode.FORMAT_QR_CODE)` en vez de escanear todos los formatos de códigos de barra?*  
+   **Respuesta:** Porque al limitar el detector únicamente a `FORMAT_QR_CODE`, ML Kit no gasta CPU buscando códigos EAN-13, Code-128 o PDF417, logrando una lectura mucho más rápida y sin falsos positivos.
+
+5. **Pregunta:** *¿Cómo dibujaron el marco del visor de cámara y el mapa de ruta sin usar imágenes externas pesadas?*  
+   **Respuesta:** Usando el componente `Canvas` de Jetpack Compose (`drawLine`, `drawPath`, `drawCircle`) y degradados `Brush.linearGradient` / `Brush.verticalGradient`. Así todo se renderiza vectorialmente a cualquier resolución de pantalla y es 100% código Kotlin modificable en vivo.
+
+---
+
+### 4. Dos ejercicios de "Modifica esto en vivo" para practicar (Fase 4 — QR y UI)
+
+#### Ejercicio práctico 1: Cambiar el color del marco o la línea láser del escáner QR en vivo
+* **Lo que puede pedir el profesor:** *"Cambien el color de las esquinas del visor de la cámara QR a verde o aumenten el tiempo de espera entre lecturas del mismo código QR".*
+* **Pasos exactos (toma 30 segundos):**
+  1. Para cambiar el tiempo entre lecturas: abrir `qr/QrAnalyzer.kt` (línea 55) y cambiar `2500L` (2,5 segundos) a `5000L` (5 segundos).
+  2. Para cambiar el color del marco del visor: abrir `qr/EscanearQrScreen.kt` y en el bloque `Canvas` cambiar `val colorMarco = Color(0xFF38BDF8)` por `val colorMarco = ColorEstadoEnCurso`.
+
+#### Ejercicio práctico 2: Aceptar códigos QR con prefijo corporativo (ej. `"BELMONTE:KR-TW-21"`)
+* **Lo que puede pedir el profesor:** *"Modifiquen la validación del QR para que si el código QR viene con el formato `BELMONTE:KR-TW-21` o `PATENTE:KR-TW-21`, igual extraiga la patente y la valide".*
+* **Pasos exactos:**
+  1. Abrir `repository/VehiculoRepository.kt` y buscar la función `verificarPatenteQrParaViaje`.
+  2. Al limpiar el string `textoQr`, encadenar `.removePrefix("BELMONTE:").removePrefix("PATENTE:").trim().uppercase()`.
