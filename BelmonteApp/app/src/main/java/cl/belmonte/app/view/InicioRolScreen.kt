@@ -2,7 +2,6 @@ package cl.belmonte.app.view
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,15 +30,15 @@ import androidx.compose.material.icons.filled.PendingActions
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -55,7 +54,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cl.belmonte.app.database.DatosInicialesBelmonte
 import cl.belmonte.app.navigation.Rutas
 import cl.belmonte.app.ui.theme.AzulBelmonte
 import cl.belmonte.app.ui.theme.AzulBelmonteClaro
@@ -78,16 +76,15 @@ import cl.belmonte.app.view.components.TarjetaMenuAccionModerna
 import cl.belmonte.app.viewmodel.BelmonteViewModel
 
 /**
- * Pantalla Principal Dinámica según Rol (Inicio / Dashboard).
+ * Pantalla Principal Exclusiva según el Rol Autenticado (Inicio / Dashboard).
  *
  * ¿QUÉ HACE ESTA PANTALLA?
- * Presenta un dashboard móvil comercial moderno con:
- * - Barra superior corporativa y Barra de Navegación Inferior (NavigationBar de Material 3).
- * - Selector rápido de rol en 1 toque para demostrar los 4 perfiles fluidamente en el video.
- * - HeroBannerBelmonte en degradado con el perfil del usuario autenticado y su empresa.
- * - Tarjetas de indicadores KPI con íconos circulares.
- * - Accesos interactivos (TarjetaMenuAccionModerna) específicos para el rol activo.
- * - Vista rápida de los viajes recientes con conector visual Origen -> Destino (LineaRutaTimeline).
+ * Presenta únicamente el entorno de trabajo del perfil que inició sesión (sin mezclar opciones
+ * ni pestañas de otros roles):
+ * - ROLE_SOLICITANTE (Trabajador): ve sus cupos asignados, pide traslados (CU-02), sigue sus viajes (CU-09) y escanea QR.
+ * - ROLE_ADMIN_EMPRESA (Admin de Empresa): contrata planes de suscripción mensual, revisa sus cobros y reparte cupos a sus trabajadores.
+ * - ROLE_ADMIN (Admin de Belmonte): gestiona el despacho central (asignar/reasignar choferes) y supervisa/emite cobros B2B.
+ * - ROLE_CONDUCTOR (Chofer): revisa únicamente sus viajes asignados, inicia/finaliza ruta con Maps/Waze e informa incidencias.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,10 +102,10 @@ fun InicioRolScreen(
     val empresaDelUsuario = empresas.find { it.idEmpresa == usuario.idEmpresa }
 
     val etiquetaRol = when (usuario.rol) {
-        "ROLE_SOLICITANTE" -> "Trabajador Solicitante"
-        "ROLE_CONDUCTOR" -> "Conductor de Flota"
-        "ROLE_ADMIN" -> "Recepcionista / Admin Central"
-        "ROLE_ADMIN_EMPRESA" -> "Administrador Empresa Cliente"
+        "ROLE_SOLICITANTE" -> "Portal Trabajador / Solicitante"
+        "ROLE_CONDUCTOR" -> "Portal Conductor de Flota"
+        "ROLE_ADMIN" -> "Portal Administración Belmonte"
+        "ROLE_ADMIN_EMPRESA" -> "Portal Administrador de Empresa"
         else -> usuario.rol
     }
 
@@ -123,9 +120,9 @@ fun InicioRolScreen(
     val rutaAccionSecundaria = when (usuario.rol) {
         "ROLE_SOLICITANTE" -> Rutas.NUEVA_SOLICITUD
         "ROLE_CONDUCTOR" -> "escanear_qr/103"
-        "ROLE_ADMIN" -> Rutas.SOLICITUDES_PENDIENTES
+        "ROLE_ADMIN" -> Rutas.COBROS_EMPRESA
         "ROLE_ADMIN_EMPRESA" -> Rutas.COBROS_EMPRESA
-        else -> "escanear_qr/103"
+        else -> Rutas.INICIO_ROL
     }
 
     Scaffold(
@@ -167,12 +164,14 @@ fun InicioRolScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { onNavigate("escanear_qr/103") }) {
-                        Icon(
-                            imageVector = Icons.Default.QrCodeScanner,
-                            contentDescription = "Escanear QR",
-                            tint = AzulBelmonteClaro
-                        )
+                    if (usuario.rol != "ROLE_ADMIN_EMPRESA") {
+                        IconButton(onClick = { onNavigate("escanear_qr/103") }) {
+                            Icon(
+                                imageVector = Icons.Default.QrCodeScanner,
+                                contentDescription = "Escanear QR",
+                                tint = AzulBelmonteClaro
+                            )
+                        }
                     }
                     IconButton(
                         onClick = {
@@ -182,7 +181,7 @@ fun InicioRolScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = "Cerrar sesión",
+                            contentDescription = "Cambiar perfil / Salir",
                             tint = RojoAccionBelmonte
                         )
                     }
@@ -216,7 +215,12 @@ fun InicioRolScreen(
                     icon = { Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = "Gestión") },
                     label = {
                         Text(
-                            text = if (usuario.rol == "ROLE_ADMIN_EMPRESA") "Cupos" else "Viajes",
+                            text = when (usuario.rol) {
+                                "ROLE_ADMIN_EMPRESA" -> "Mis Cupos"
+                                "ROLE_ADMIN" -> "Despacho"
+                                "ROLE_CONDUCTOR" -> "Hoja Ruta"
+                                else -> "Mis Viajes"
+                            },
                             fontSize = 11.sp
                         )
                     },
@@ -232,7 +236,7 @@ fun InicioRolScreen(
                         Icon(
                             imageVector = when (usuario.rol) {
                                 "ROLE_SOLICITANTE" -> Icons.Default.AddCircleOutline
-                                "ROLE_ADMIN_EMPRESA" -> Icons.AutoMirrored.Filled.ReceiptLong
+                                "ROLE_ADMIN_EMPRESA", "ROLE_ADMIN" -> Icons.AutoMirrored.Filled.ReceiptLong
                                 else -> Icons.Default.QrCodeScanner
                             },
                             contentDescription = "Acción"
@@ -242,7 +246,8 @@ fun InicioRolScreen(
                         Text(
                             text = when (usuario.rol) {
                                 "ROLE_SOLICITANTE" -> "Pedir Viaje"
-                                "ROLE_ADMIN_EMPRESA" -> "Cobros"
+                                "ROLE_ADMIN_EMPRESA" -> "Planes"
+                                "ROLE_ADMIN" -> "Facturación"
                                 else -> "Lector QR"
                             },
                             fontSize = 11.sp
@@ -259,8 +264,8 @@ fun InicioRolScreen(
                         viewModel.cerrarSesion()
                         onLogout()
                     },
-                    icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Salir") },
-                    label = { Text("Login", fontSize = 11.sp) },
+                    icon = { Icon(Icons.Default.SwapHoriz, contentDescription = "Cambiar Perfil") },
+                    label = { Text("Perfiles", fontSize = 11.sp) },
                     colors = NavigationBarItemDefaults.colors(
                         unselectedIconColor = RojoAccionBelmonte,
                         unselectedTextColor = RojoAccionBelmonte
@@ -278,46 +283,9 @@ fun InicioRolScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // BARRA DE CAMBIO RÁPIDO DE ROL EN 1 TOQUE (ideal para el video de demostración)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ChipCambioRol(
-                    etiqueta = "Solicitante",
-                    seleccionado = usuario.rol == "ROLE_SOLICITANTE",
-                    onClick = {
-                        viewModel.iniciarSesion("daniela.munoz@andessur.test", DatosInicialesBelmonte.CLAVE_PRUEBA)
-                    }
-                )
-                ChipCambioRol(
-                    etiqueta = "Conductor",
-                    seleccionado = usuario.rol == "ROLE_CONDUCTOR",
-                    onClick = {
-                        viewModel.iniciarSesion("pedro.soto@belmonte.test", DatosInicialesBelmonte.CLAVE_PRUEBA)
-                    }
-                )
-                ChipCambioRol(
-                    etiqueta = "Admin Belmonte",
-                    seleccionado = usuario.rol == "ROLE_ADMIN",
-                    onClick = {
-                        viewModel.iniciarSesion("valeria.admin@belmonte.test", DatosInicialesBelmonte.CLAVE_PRUEBA)
-                    }
-                )
-                ChipCambioRol(
-                    etiqueta = "Admin Empresa",
-                    seleccionado = usuario.rol == "ROLE_ADMIN_EMPRESA",
-                    onClick = {
-                        viewModel.iniciarSesion("tomas.herrera@andessur.test", DatosInicialesBelmonte.CLAVE_PRUEBA)
-                    }
-                )
-            }
-
-            // 1. HERO BANNER CON DEGRADADO Y DATOS DEL USUARIO
+            // 1. HERO BANNER CON DEGRADADO Y DATOS DEL USUARIO AUTENTICADO
             HeroBannerBelmonte(
-                etiquetaSuperior = etiquetaRol,
+                etiquetaSuperior = etiquetaRol.uppercase(),
                 titulo = "Hola, ${usuario.nombreCompleto}",
                 subtitulo = if (empresaDelUsuario != null) {
                     "${empresaDelUsuario.razonSocial} • RUT ${empresaDelUsuario.rutEmpresa}"
@@ -327,7 +295,7 @@ fun InicioRolScreen(
                 icono = Icons.Default.Person
             )
 
-            // 2. INDICADORES KPI CON ÍCONOS CIRCULARES SEGÚN EL ROL
+            // 2. INDICADORES KPI EXCLUSIVOS SEGÚN EL ROL
             when (usuario.rol) {
                 "ROLE_SOLICITANTE" -> {
                     val misViajes = todosLosViajes.filter { it.idSolicitante == usuario.idUsuario }
@@ -338,7 +306,7 @@ fun InicioRolScreen(
                     ) {
                         KpiCardModerna(
                             modifier = Modifier.weight(1f),
-                            titulo = "Cupos Libres",
+                            titulo = "Mis Cupos Libres",
                             valor = "$disponibles",
                             icono = Icons.Default.CheckCircle,
                             color = ColorEstadoEnCurso
@@ -352,11 +320,50 @@ fun InicioRolScreen(
                         )
                         KpiCardModerna(
                             modifier = Modifier.weight(1f),
-                            titulo = "Activos",
+                            titulo = "En Curso / Pend.",
                             valor = "${misViajes.count { it.idEstado in listOf(1, 2, 3) }}",
                             icono = Icons.Default.Schedule,
                             color = ColorEstadoPendiente
                         )
+                    }
+
+                    // Resumen claro de los cupos que la empresa le asignó a este trabajador
+                    if (cuposTrabajador.isNotEmpty()) {
+                        BelmonteCard(colorBorde = AzulBelmonte) {
+                            Text(
+                                text = "Mis Cupos Asignados por Mi Empresa (Octubre 2026)",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = AzulBelmonteClaro,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                cuposTrabajador.forEach { c ->
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = c.tipoVehiculo.nombre,
+                                            fontSize = 11.sp,
+                                            color = TextoSecundarioOscuro,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = "${c.disponibles} disp.",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = if (c.disponibles > 0) ColorEstadoEnCurso else ColorEstadoPendiente,
+                                            fontWeight = FontWeight.ExtraBold
+                                        )
+                                        Text(
+                                            text = "(de ${c.asignados})",
+                                            fontSize = 10.sp,
+                                            color = TextoSecundarioOscuro
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -368,7 +375,7 @@ fun InicioRolScreen(
                     ) {
                         KpiCardModerna(
                             modifier = Modifier.weight(1f),
-                            titulo = "Asignados",
+                            titulo = "Por Iniciar",
                             valor = "${misViajesConductor.count { it.idEstado == 2 }}",
                             icono = Icons.Default.Schedule,
                             color = ColorEstadoAsignado
@@ -428,7 +435,7 @@ fun InicioRolScreen(
                     ) {
                         KpiCardModerna(
                             modifier = Modifier.weight(1f),
-                            titulo = "Viajes Mes",
+                            titulo = "Viajes Empresa",
                             valor = "${viajesEmpresa.size}",
                             icono = Icons.Default.DirectionsCar,
                             color = AzulBelmonteClaro
@@ -451,9 +458,15 @@ fun InicioRolScreen(
                 }
             }
 
-            // 3. MÓDULOS DE OPERACIÓN DEL ROL (TARJETAS MODERNAS CON ÍCONO Y FLECHA)
+            // 3. MÓDULOS DE OPERACIÓN EXCLUSIVOS DE ESTE ROL (SIN MEZCLAR FUNCIONES)
             Text(
-                text = "Módulos de Operación",
+                text = when (usuario.rol) {
+                    "ROLE_SOLICITANTE" -> "Servicios para el Trabajador"
+                    "ROLE_ADMIN_EMPRESA" -> "Administración de Mi Empresa Cliente"
+                    "ROLE_ADMIN" -> "Operaciones Centrales de Belmonte SpA"
+                    "ROLE_CONDUCTOR" -> "Operación en Terreno del Conductor"
+                    else -> "Módulos de Operación"
+                },
                 style = MaterialTheme.typography.titleMedium,
                 color = TextoBlanco,
                 fontWeight = FontWeight.ExtraBold
@@ -462,51 +475,43 @@ fun InicioRolScreen(
             when (usuario.rol) {
                 "ROLE_SOLICITANTE" -> {
                     TarjetaMenuAccionModerna(
-                        titulo = "Nueva Solicitud de Traslado",
-                        subtitulo = "CU-02 • Elige Auto, Van o Camión y calcula distancia GPS",
+                        titulo = "Pedir Nuevo Traslado Corporativo",
+                        subtitulo = "CU-02 • Solicita Auto, Van o Camión usando 1 cupo asignado por tu empresa",
                         icono = Icons.Default.AddCircleOutline,
                         colorAcento = RojoAccionBelmonte,
                         badgeTexto = "CU-02",
                         onClick = { onNavigate(Rutas.NUEVA_SOLICITUD) }
                     )
                     TarjetaMenuAccionModerna(
-                        titulo = "Mis Viajes y Seguimiento",
-                        subtitulo = "CU-09 • Revisa estados en tiempo real o cancela solicitudes",
+                        titulo = "Mis Viajes y Seguimiento de Chofer",
+                        subtitulo = "CU-09 • Revisa quién te recoge, patente, llama al conductor o cancela",
                         icono = Icons.AutoMirrored.Filled.ListAlt,
                         colorAcento = AzulBelmonte,
                         badgeTexto = "CU-09",
                         onClick = { onNavigate(Rutas.MIS_VIAJES) }
                     )
                     TarjetaMenuAccionModerna(
-                        titulo = "Validar Vehículo por QR",
-                        subtitulo = "Fase 4 • Cámara en vivo con CameraX + ML Kit para verificar patente",
+                        titulo = "Validar Patente del Vehículo por QR",
+                        subtitulo = "Fase 4 • Escanea con la cámara el código QR al subir al vehículo asignado",
                         icono = Icons.Default.QrCodeScanner,
                         colorAcento = ColorEstadoEnCurso,
                         badgeTexto = "QR CAM",
                         onClick = { onNavigate("escanear_qr/103") }
                     )
-                    TarjetaMenuAccionModerna(
-                        titulo = "Planes de Suscripción y Cobros",
-                        subtitulo = "Plan Básico, Grupos, Carga y Personalizado + Extras del mes",
-                        icono = Icons.AutoMirrored.Filled.ReceiptLong,
-                        colorAcento = Color(0xFFA855F7),
-                        badgeTexto = "PLANES",
-                        onClick = { onNavigate(Rutas.COBROS_EMPRESA) }
-                    )
                 }
 
                 "ROLE_CONDUCTOR" -> {
                     TarjetaMenuAccionModerna(
-                        titulo = "Mis Viajes del Día",
-                        subtitulo = "CU-04 al CU-08 • Iniciar/finalizar ruta, Google Maps/Waze e incidencias",
+                        titulo = "Mi Hoja de Ruta del Día",
+                        subtitulo = "CU-04 al CU-08 • Iniciar/finalizar viaje, abrir Google Maps/Waze e incidencias",
                         icono = Icons.Default.DirectionsCar,
                         colorAcento = ColorEstadoEnCurso,
                         badgeTexto = "CU-04",
                         onClick = { onNavigate(Rutas.VIAJES_CONDUCTOR) }
                     )
                     TarjetaMenuAccionModerna(
-                        titulo = "Escanear QR de Patente",
-                        subtitulo = "CU-05 • Cámara en vivo con CameraX + ML Kit para validar vehículo",
+                        titulo = "Verificar QR de Mi Vehículo Asignado",
+                        subtitulo = "CU-05 • Cámara en vivo con CameraX + ML Kit para validar patente de turno",
                         icono = Icons.Default.QrCodeScanner,
                         colorAcento = RojoAccionBelmonte,
                         badgeTexto = "QR CAM",
@@ -516,59 +521,60 @@ fun InicioRolScreen(
 
                 "ROLE_ADMIN" -> {
                     TarjetaMenuAccionModerna(
-                        titulo = "Bandeja de Solicitudes y Flota",
-                        subtitulo = "CU-03 y CU-10 • Asignar chofer/vehículo o reasignar por incidencia",
+                        titulo = "Despacho Central: Asignar y Reasignar",
+                        subtitulo = "CU-03 y CU-10 • Asignar conductor/vehículo a solicitudes o reasignar por incidencia",
                         icono = Icons.Default.PendingActions,
                         colorAcento = ColorEstadoPendiente,
                         badgeTexto = "${todosLosViajes.count { it.idEstado == 1 }} PEND",
                         onClick = { onNavigate(Rutas.SOLICITUDES_PENDIENTES) }
                     )
                     TarjetaMenuAccionModerna(
-                        titulo = "Planes de Suscripción y Cobros B2B",
-                        subtitulo = "Plan Básico (10A+1V), Grupos (10A+4V), Carga (10A+6V+5C) y Personalizado",
+                        titulo = "Facturación B2B y Cobros a Empresas",
+                        subtitulo = "RN-14 • Supervisar paquetes contratados y emitir cobro mensual de km extra",
                         icono = Icons.AutoMirrored.Filled.ReceiptLong,
                         colorAcento = Color(0xFFA855F7),
-                        badgeTexto = "PLANES",
+                        badgeTexto = "COBROS B2B",
                         onClick = { onNavigate(Rutas.COBROS_EMPRESA) }
                     )
                     TarjetaMenuAccionModerna(
-                        titulo = "Verificador QR de Flota",
-                        subtitulo = "Inspeccionar código QR de patentes KR-TW-21, LK-JH-44, PX-RT-89 y JT-KL-52",
+                        titulo = "Inspección QR de Flota Belmonte",
+                        subtitulo = "Verificar patentes oficiales KR-TW-21, LK-JH-44, PX-RT-89 y JT-KL-52",
                         icono = Icons.Default.QrCodeScanner,
                         colorAcento = AzulBelmonte,
-                        badgeTexto = "QR CAM",
+                        badgeTexto = "QR FLOTA",
                         onClick = { onNavigate("escanear_qr/103") }
                     )
                 }
 
                 "ROLE_ADMIN_EMPRESA" -> {
                     TarjetaMenuAccionModerna(
-                        titulo = "Planes de Suscripción y Cobros",
-                        subtitulo = "Plan Básico (10A+1V), Grupos (10A+4V), Carga (10A+6V+5C) y Personalizado",
+                        titulo = "Planes de Suscripción y Facturación",
+                        subtitulo = "Contratar Plan Básico (10A+1V), Grupos (10A+4V), Carga (10A+6V+5C) o Personalizado",
                         icono = Icons.AutoMirrored.Filled.ReceiptLong,
                         colorAcento = RojoAccionBelmonte,
                         badgeTexto = "PLANES",
                         onClick = { onNavigate(Rutas.COBROS_EMPRESA) }
                     )
                     TarjetaMenuAccionModerna(
-                        titulo = "Cupos Contratados por Vehículo",
-                        subtitulo = "Paquete mensual 2026-10 • Disponibles, repartidos y consumidos",
+                        titulo = "Cupos Contratados y Viajes de Mi Empresa",
+                        subtitulo = "Paquete mensual 2026-10 • Ver cupos contratados, repartidos, usados y viajes",
                         icono = Icons.Default.Business,
                         colorAcento = AzulBelmonte,
+                        badgeTexto = "MI EMPRESA",
                         onClick = { onNavigate(Rutas.MIS_CUPOS_EMPRESA) }
                     )
                     TarjetaMenuAccionModerna(
-                        titulo = "Repartir Cupos a Trabajadores",
-                        subtitulo = "RN-12 • Asignar cupos de Auto, Van o Camión a empleados",
+                        titulo = "Repartir Cupos a Mis Trabajadores",
+                        subtitulo = "RN-12 • Distribuir cupos de Auto, Van o Camión entre los empleados de mi empresa",
                         icono = Icons.Default.GroupAdd,
                         colorAcento = ColorEstadoEnCurso,
-                        badgeTexto = "CUPOS",
+                        badgeTexto = "REPARTIR",
                         onClick = { onNavigate(Rutas.REPARTIR_CUPOS) }
                     )
                 }
             }
 
-            // 4. VISTA RÁPIDA DE VIAJES RECIENTES CON CONECTOR VISUAL ORIGEN -> DESTINO
+            // 4. VISTA RÁPIDA DE TRASLADOS FILTRADA ESTRICTAMENTE SEGÚN EL ROL
             val viajesDestacados = when (usuario.rol) {
                 "ROLE_SOLICITANTE" -> todosLosViajes.filter { it.idSolicitante == usuario.idUsuario }.take(2)
                 "ROLE_CONDUCTOR" -> todosLosViajes.filter { it.idConductor == usuario.idUsuario }.take(2)
@@ -583,7 +589,12 @@ fun InicioRolScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Actividad Reciente de Traslados",
+                        text = when (usuario.rol) {
+                            "ROLE_SOLICITANTE" -> "Mis Solicitudes Recientes"
+                            "ROLE_CONDUCTOR" -> "Mis Viajes Asignados"
+                            "ROLE_ADMIN_EMPRESA" -> "Últimos Viajes de Mi Empresa"
+                            else -> "Últimas Solicitudes en Central"
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         color = TextoBlanco,
                         fontWeight = FontWeight.ExtraBold
@@ -607,6 +618,7 @@ fun InicioRolScreen(
                                 } else {
                                     onNavigate("reasignar_viaje/${viaje.idViaje}")
                                 }
+                                "ROLE_ADMIN_EMPRESA" -> onNavigate(Rutas.MIS_CUPOS_EMPRESA)
                                 else -> onNavigate("detalle_seguimiento/${viaje.idViaje}")
                             }
                         },
@@ -652,33 +664,32 @@ fun InicioRolScreen(
                     }
                 }
             }
+
+            // Botón claro al final para volver al selector de perfiles inicial si se desea cambiar de rol
+            OutlinedButton(
+                onClick = {
+                    viewModel.cerrarSesion()
+                    onLogout()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, RojoAccionBelmonte.copy(alpha = 0.6f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SwapHoriz,
+                    contentDescription = null,
+                    tint = RojoAccionBelmonte
+                )
+                Spacer(modifier = Modifier.size(8.dp))
+                Text(
+                    text = "CERRAR SESIÓN / CAMBIAR PERFIL DE INGRESO",
+                    color = RojoAccionBelmonte,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp
+                )
+            }
         }
     }
-}
-
-@Composable
-private fun ChipCambioRol(
-    etiqueta: String,
-    seleccionado: Boolean,
-    onClick: () -> Unit
-) {
-    FilterChip(
-        selected = seleccionado,
-        onClick = onClick,
-        label = {
-            Text(
-                text = etiqueta,
-                fontSize = 11.sp,
-                fontWeight = if (seleccionado) FontWeight.ExtraBold else FontWeight.Medium
-            )
-        },
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = AzulBelmonte,
-            selectedLabelColor = Color.White,
-            containerColor = SuperficieOscura,
-            labelColor = TextoSecundarioOscuro
-        )
-    )
 }
 
 @Composable

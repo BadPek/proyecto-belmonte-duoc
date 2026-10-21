@@ -500,7 +500,15 @@ fun CobrosEmpresaScreen(
     val mensajeFeedback by viewModel.mensajeFeedback.collectAsState()
     val esError by viewModel.esErrorFeedback.collectAsState()
 
-    var idEmpresaSeleccionada by remember { mutableLongStateOf(usuarioActual?.idEmpresa ?: 1L) }
+    val esAdminBelmonte = usuarioActual?.rol == "ROLE_ADMIN"
+    var idEmpresaSeleccionada by remember(usuarioActual?.idEmpresa) {
+        mutableLongStateOf(usuarioActual?.idEmpresa ?: 1L)
+    }
+
+    LaunchedEffect(idEmpresaSeleccionada) {
+        viewModel.recargarCuposPorEmpresa(idEmpresaSeleccionada)
+    }
+
     val empresa = empresas.find { it.idEmpresa == idEmpresaSeleccionada }
     val cobrosEmpresa = todosLosCobros.filter { it.idEmpresa == idEmpresaSeleccionada }
     val viajesConExtraFinalizados = todosLosViajes.filter {
@@ -523,9 +531,17 @@ fun CobrosEmpresaScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Planes de Suscripción y Cobros", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
                         Text(
-                            text = "Catálogo de Paquetes Mensuales y Extras (RN-14)",
+                            text = if (esAdminBelmonte) "Facturación B2B Empresas" else "Planes y Cobros de Mi Empresa",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 17.sp
+                        )
+                        Text(
+                            text = if (esAdminBelmonte) {
+                                "Supervisión central de paquetes y km extra (RN-14)"
+                            } else {
+                                "${empresa?.razonSocial ?: "Mi Empresa"} • Suscripción y Extras"
+                            },
                             fontSize = 11.sp,
                             color = AzulBelmonteClaro
                         )
@@ -552,8 +568,8 @@ fun CobrosEmpresaScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Selector de empresa si entra como Admin Belmonte
-            if (empresas.size > 1) {
+            // Selector de empresa únicamente visible si entra el Administrador Central de Belmonte (RN-06)
+            if (esAdminBelmonte && empresas.size > 1) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)

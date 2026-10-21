@@ -11,7 +11,8 @@ package cl.belmonte.app.navigation
  * lugar todas las pantallas que tendrá la app en la Fase 3 y Fase 4.
  */
 object Rutas {
-    // Pantallas comunes
+    // Pantallas comunes de entrada
+    const val SELECCION_PERFIL = "seleccion_perfil"
     const val LOGIN = "login"
     const val INICIO_ROL = "inicio_rol"
 

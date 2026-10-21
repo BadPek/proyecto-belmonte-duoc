@@ -20,6 +20,7 @@ import cl.belmonte.app.view.NuevaSolicitudScreen
 import cl.belmonte.app.view.ReasignarViajeScreen
 import cl.belmonte.app.view.RepartirCuposScreen
 import cl.belmonte.app.view.ReportarIncidenciaScreen
+import cl.belmonte.app.view.SeleccionPerfilScreen
 import cl.belmonte.app.view.SolicitudesPendientesAdminScreen
 import cl.belmonte.app.view.ViajesConductorScreen
 import cl.belmonte.app.viewmodel.BelmonteViewModel
@@ -29,15 +30,11 @@ import cl.belmonte.app.viewmodel.BelmonteViewModel
  *
  * ¿QUÉ HACE ESTE ARCHIVO?
  * Conecta todas las rutas definidas en Rutas.kt con sus respectivas pantallas @Composable:
- * - Comunes: Login (CU-01) e Inicio según Rol.
+ * - Entrada: Selección de Perfil Inicial (quién eres) -> Login exclusivo por rol (CU-01) -> Inicio según Rol.
  * - Solicitante: Nueva Solicitud (CU-02), Mis Viajes, Seguimiento (CU-09) y Escanear QR.
  * - Admin Belmonte: Solicitudes Pendientes, Asignar (CU-03) y Reasignar (CU-10).
  * - Conductor: Viajes del Día (CU-04), Detalle con Iniciar/Finalizar y Maps/Waze (CU-05/06/07), Incidencia (CU-08).
  * - Admin Empresa: Mis Cupos, Repartir Cupos y Cobros del Mes.
- *
- * ¿POR QUÉ SE HACE ASÍ?
- * Centralizar el NavHost en el paquete navigation permite ver de un vistazo todo el flujo de
- * pantallas de la aplicación y facilita agregar una ruta nueva en vivo si el profesor lo pide.
  */
 @Composable
 fun BelmonteNavHost(
@@ -46,21 +43,35 @@ fun BelmonteNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Rutas.LOGIN
+        startDestination = Rutas.SELECCION_PERFIL
     ) {
-        // 1. Pantalla de Login (CU-01)
+        // 0. Paso 1 antes de entrar: ¿Quién eres? (Trabajador, Admin Empresa, Admin Belmonte o Conductor)
+        composable(route = Rutas.SELECCION_PERFIL) {
+            SeleccionPerfilScreen(
+                onPerfilSeleccionado = { rolElegido ->
+                    viewModel.seleccionarPerfilInicial(rolElegido)
+                    navController.navigate(Rutas.LOGIN)
+                }
+            )
+        }
+
+        // 1. Paso 2: Pantalla de Login exclusiva del perfil elegido (CU-01)
         composable(route = Rutas.LOGIN) {
             LoginScreen(
                 viewModel = viewModel,
+                onBackToSeleccionPerfil = {
+                    viewModel.limpiarMensaje()
+                    navController.popBackStack()
+                },
                 onLoginSuccess = {
                     navController.navigate(Rutas.INICIO_ROL) {
-                        popUpTo(Rutas.LOGIN) { inclusive = true }
+                        popUpTo(Rutas.SELECCION_PERFIL) { inclusive = false }
                     }
                 }
             )
         }
 
-        // 2. Menú / Inicio según el rol autenticado
+        // 2. Menú / Inicio según el rol autenticado (sin mezclar otros roles)
         composable(route = Rutas.INICIO_ROL) {
             InicioRolScreen(
                 viewModel = viewModel,
@@ -69,7 +80,7 @@ fun BelmonteNavHost(
                     navController.navigate(rutaDestino)
                 },
                 onLogout = {
-                    navController.navigate(Rutas.LOGIN) {
+                    navController.navigate(Rutas.SELECCION_PERFIL) {
                         popUpTo(0) { inclusive = true }
                     }
                 }

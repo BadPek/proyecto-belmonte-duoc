@@ -94,19 +94,20 @@ fun ViajesConductorScreen(
     val mensajeFeedback by viewModel.mensajeFeedback.collectAsState()
     val esError by viewModel.esErrorFeedback.collectAsState()
 
-    var mostrarSoloMisViajes by remember { mutableStateOf(true) }
+    var mostrarSoloActivos by remember { mutableStateOf(false) }
 
     val idConductorActual = usuario?.idUsuario ?: 6L
-    val listaViajes = if (mostrarSoloMisViajes) {
-        todosLosViajes.filter { it.idConductor == idConductorActual }
+    val misViajesTotales = todosLosViajes.filter { it.idConductor == idConductorActual }
+    val listaViajes = if (mostrarSoloActivos) {
+        misViajesTotales.filter { it.idEstado == 2 || it.idEstado == 3 }
     } else {
-        todosLosViajes.filter { it.idConductor != null }
+        misViajesTotales
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mis Viajes de Hoy (CU-04)") },
+                title = { Text("Mi Hoja de Ruta (CU-04)") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
@@ -139,20 +140,20 @@ fun ViajesConductorScreen(
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
-                    selected = mostrarSoloMisViajes,
-                    onClick = { mostrarSoloMisViajes = true },
-                    label = { Text("Mis Asignados (${todosLosViajes.count { it.idConductor == idConductorActual }})") }
+                    selected = !mostrarSoloActivos,
+                    onClick = { mostrarSoloActivos = false },
+                    label = { Text("Todos Mis Viajes (${misViajesTotales.size})") }
                 )
                 FilterChip(
-                    selected = !mostrarSoloMisViajes,
-                    onClick = { mostrarSoloMisViajes = false },
-                    label = { Text("Toda la Flota") }
+                    selected = mostrarSoloActivos,
+                    onClick = { mostrarSoloActivos = true },
+                    label = { Text("Activos Hoy (${misViajesTotales.count { it.idEstado == 2 || it.idEstado == 3 }})") }
                 )
             }
 
             if (listaViajes.isEmpty()) {
                 BelmonteCard {
-                    Text("No tienes servicios asignados para hoy.")
+                    Text("No tienes servicios asignados en este filtro.")
                 }
             }
 

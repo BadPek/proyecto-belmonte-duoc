@@ -47,7 +47,10 @@ class BelmonteViewModel(
     private val viajeRepository: ViajeRepository
 ) : ViewModel() {
 
-    // --- ESTADO DE SESIÓN Y MENSAJES DE RETROALIMENTACIÓN ---
+    // --- ESTADO DE SESIÓN, PERFIL PRESELECCIONADO Y MENSAJES DE RETROALIMENTACIÓN ---
+
+    private val _rolPreseleccionado = MutableStateFlow<String?>(null)
+    val rolPreseleccionado: StateFlow<String?> = _rolPreseleccionado.asStateFlow()
 
     private val _usuarioActual = MutableStateFlow<UsuarioEntity?>(null)
     val usuarioActual: StateFlow<UsuarioEntity?> = _usuarioActual.asStateFlow()
@@ -119,10 +122,20 @@ class BelmonteViewModel(
         }
     }
 
-    // --- FUNCIONES DE AUTENTICACIÓN (CU-01) ---
+    // --- FUNCIONES DE SELECCIÓN DE PERFIL INICIAL Y AUTENTICACIÓN (CU-01) ---
 
     /**
-     * Valida correo/RUT y contraseña contra la tabla local de usuarios de Room.
+     * Define qué tipo de usuario va a ingresar antes de mostrar el formulario de Login
+     * (ROLE_SOLICITANTE, ROLE_ADMIN_EMPRESA, ROLE_ADMIN o ROLE_CONDUCTOR).
+     */
+    fun seleccionarPerfilInicial(rol: String) {
+        _rolPreseleccionado.value = rol
+        limpiarMensaje()
+    }
+
+    /**
+     * Valida correo/RUT y contraseña contra la tabla local de usuarios de Room,
+     * verificando además que coincida con el perfil elegido en la pantalla de bienvenida.
      */
     fun iniciarSesion(
         identificador: String,
@@ -137,6 +150,15 @@ class BelmonteViewModel(
         viewModelScope.launch {
             val usuario = usuarioRepository.login(identificador, password)
             if (usuario != null) {
+                val rolEsperado = _rolPreseleccionado.value
+                if (rolEsperado != null && usuario.rol != rolEsperado) {
+                    mostrarMensaje(
+                        "La cuenta '${usuario.email}' pertenece al perfil ${nombreLegibleRol(usuario.rol)}. " +
+                            "Vuelve atrás y selecciona ese perfil para ingresar.",
+                        esError = true
+                    )
+                    return@launch
+                }
                 _usuarioActual.value = usuario
                 recargarCuposSegunUsuario(usuario)
                 limpiarMensaje()
@@ -149,8 +171,17 @@ class BelmonteViewModel(
 
     fun cerrarSesion() {
         _usuarioActual.value = null
+        _rolPreseleccionado.value = null
         _resultadoQr.value = null
         limpiarMensaje()
+    }
+
+    private fun nombreLegibleRol(rol: String): String = when (rol) {
+        "ROLE_SOLICITANTE" -> "Trabajador / Solicitante"
+        "ROLE_ADMIN_EMPRESA" -> "Administrador de Empresa"
+        "ROLE_ADMIN" -> "Administrador de Belmonte"
+        "ROLE_CONDUCTOR" -> "Conductor de Flota"
+        else -> rol
     }
 
     /**
@@ -163,11 +194,16 @@ class BelmonteViewModel(
         }
     }
 
+    fun recargarCuposPorEmpresa(idEmpresa: Long) {
+        viewModelScope.launch {
+            _cuposEmpresa.value = cobroRepository.obtenerResumenCuposEmpresa(idEmpresa)
+        }
+    }
+
     private suspend fun recargarCuposSegunUsuario(usuario: UsuarioEntity) {
         _cuposTrabajador.value = cobroRepository.obtenerResumenCuposTrabajador(usuario.idUsuario)
-        usuario.idEmpresa?.let { idEmp ->
-            _cuposEmpresa.value = cobroRepository.obtenerResumenCuposEmpresa(idEmp)
-        }
+        val idEmp = usuario.idEmpresa ?: 1L
+        _cuposEmpresa.value = cobroRepository.obtenerResumenCuposEmpresa(idEmp)
     }
 
     // --- CONSULTAS ESPECÍFICAS POR ID DE VIAJE ---
