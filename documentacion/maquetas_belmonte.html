@@ -1,0 +1,330 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mockups Proyecto Belmonte</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            padding: 40px;
+            flex-wrap: wrap;
+        }
+        .phone {
+            width: 320px;
+            height: 640px;
+            background: #ffffff;
+            border-radius: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            overflow: hidden;
+            position: relative;
+            border: 8px solid #333;
+            display: flex;
+            flex-direction: column;
+        }
+        .status-bar {
+            background: #002B5B;
+            height: 24px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            box-sizing: border-box;
+            color: white;
+            font-size: 12px;
+        }
+        .app-bar {
+            background: #002B5B;
+            color: white;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .app-bar-back {
+            margin-right: 15px;
+            cursor: pointer;
+        }
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        
+        /* LOGIN SCREEN */
+        .login-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            background: #002B5B;
+            color: white;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .login-screen h1 { margin-bottom: 5px; }
+        .login-screen p { margin-bottom: 40px; font-size: 14px; color: #a9c2df; }
+        .input-group {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: #E84C3D;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 10px;
+            cursor: pointer;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        
+        /* LISTA VIAJES */
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 5px solid #002B5B;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .badge {
+            background: #e2e8f0;
+            color: #4a5568;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .badge.asignado { background: #bee3f8; color: #2b6cb0; }
+        .badge.encurso { background: #c6f6d5; color: #2f855a; }
+        .card-body { font-size: 14px; color: #4a5568; line-height: 1.5; }
+        .card-footer {
+            margin-top: 10px;
+            text-align: right;
+        }
+        .btn-small {
+            background: #002B5B;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        /* DETALLE VIAJE */
+        .detail-header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .detail-title { font-size: 18px; font-weight: bold; color: #002B5B; margin-bottom: 10px; }
+        .detail-row { display: flex; margin-bottom: 10px; font-size: 14px; }
+        .detail-icon { margin-right: 10px; color: #E84C3D; font-weight: bold; }
+        
+        .map-placeholder {
+            height: 150px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #718096;
+            margin-bottom: 20px;
+            border: 2px dashed #cbd5e0;
+        }
+        
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .btn-waze { background: #33ccff; color: white; border:none; padding: 10px; border-radius: 5px;}
+        .btn-inci { background: #E84C3D; color: white; border:none; padding: 10px; border-radius: 5px;}
+        .btn-end { background: #38a169; color: white; grid-column: span 2; border:none; padding: 10px; border-radius: 5px;}
+        
+        /* INCIDENCIA */
+        .form-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #4a5568;
+            margin-bottom: 5px;
+            display: block;
+        }
+        .form-select, .form-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+        .form-textarea {
+            height: 120px;
+            resize: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PANTALLA 1: LOGIN -->
+    <div class="phone">
+        <div class="status-bar">
+            <span>12:30</span>
+            <span>LTE 100%</span>
+        </div>
+        <div class="login-screen">
+            <h1>BELMONTE</h1>
+            <p>App de Choferes Corporativos</p>
+            
+            <div class="input-group">
+                <input type="text" placeholder="RUT (Ej: 12345678-9)">
+            </div>
+            <div class="input-group">
+                <input type="password" placeholder="Contraseña">
+            </div>
+            
+            <button class="btn">INICIAR SESIÓN</button>
+        </div>
+    </div>
+
+    <!-- PANTALLA 2: LISTA DE VIAJES -->
+    <div class="phone">
+        <div class="status-bar">
+            <span>12:31</span>
+            <span>LTE 100%</span>
+        </div>
+        <div class="app-bar">
+            Mis Viajes de Hoy
+        </div>
+        <div class="content">
+            <div class="card">
+                <div class="card-header">
+                    <span>Viaje #1042</span>
+                    <span class="badge encurso">En Curso</span>
+                </div>
+                <div class="card-body">
+                    <strong>Origen:</strong> Hotel W Santiago<br>
+                    <strong>Destino:</strong> Aeropuerto SCL<br>
+                    <strong>Hora:</strong> 13:00 hrs
+                </div>
+                <div class="card-footer">
+                    <button class="btn-small">Ver Detalle</button>
+                </div>
+            </div>
+            
+            <div class="card" style="border-left-color: #cbd5e0; opacity: 0.8;">
+                <div class="card-header">
+                    <span>Viaje #1045</span>
+                    <span class="badge asignado">Asignado</span>
+                </div>
+                <div class="card-body">
+                    <strong>Origen:</strong> Oficina Central<br>
+                    <strong>Destino:</strong> Metro Tobalaba<br>
+                    <strong>Hora:</strong> 16:30 hrs
+                </div>
+                <div class="card-footer">
+                    <button class="btn-small" style="background: #a0aec0;">Ver Detalle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 3: DETALLE DEL VIAJE -->
+    <div class="phone">
+        <div class="status-bar">
+            <span>12:35</span>
+            <span>LTE 100%</span>
+        </div>
+        <div class="app-bar">
+            <span class="app-bar-back">←</span> Detalle Viaje #1042
+        </div>
+        <div class="content">
+            <div class="detail-header">
+                <div class="detail-title">Traslado a Aeropuerto</div>
+                <div class="detail-row">
+                    <span class="detail-icon">O</span> Hotel W Santiago
+                </div>
+                <div class="detail-row">
+                    <span class="detail-icon">D</span> Aeropuerto (SCL)
+                </div>
+                <div class="detail-row" style="margin-top: 10px; font-weight: bold; color: #2b6cb0;">
+                    Vuelo: LA530 - Puerta 4
+                </div>
+            </div>
+            
+            <div class="map-placeholder">
+                [ Mapa ]
+            </div>
+            
+            <div class="action-grid">
+                <button class="btn-waze">Waze</button>
+                <button class="btn-inci">Incidencia</button>
+                <button class="btn-end">FINALIZAR VIAJE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 4: REPORTAR INCIDENCIA -->
+    <div class="phone">
+        <div class="status-bar">
+            <span>12:40</span>
+            <span>LTE 100%</span>
+        </div>
+        <div class="app-bar">
+            <span class="app-bar-back">←</span> Reportar Problema
+        </div>
+        <div class="content">
+            <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 10px; margin-bottom: 20px; font-size: 13px; color: #991b1b;">
+                Reportando incidencia para Viaje #1042.
+            </div>
+            
+            <label class="form-label">Tipo de Incidencia</label>
+            <select class="form-select">
+                <option>Seleccione...</option>
+                <option>Panne Mecánica</option>
+                <option>Congestión Crítica / Retraso</option>
+                <option>Pasajero No se Presenta</option>
+                <option>Colisión / Accidente</option>
+            </select>
+            
+            <label class="form-label">Descripción Breve</label>
+            <textarea class="form-textarea" placeholder="Escribe los detalles aquí..."></textarea>
+            
+            <button class="btn" style="background: #E84C3D; border-radius: 5px;">ENVIAR REPORTE</button>
+        </div>
+    </div>
+
+</body>
+</html>
